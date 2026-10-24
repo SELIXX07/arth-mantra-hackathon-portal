@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #00D2FF;
+  --color-primary-dark: #0072FF;
+  --color-accent: #FF7A00;
+  --color-accent-amber: #F59E0B;
+  --color-dark-bg: #050814;
+  --color-dark-card: #0C1222;
+  --color-dark-card-hover: #121B32;
+  --color-dark-border: #1E293B;
+  --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-display), system-ui, sans-serif;
+  --font-mono: var(--font-mono), monospace;
+}
+
+:root {
+  --background: #050814;
+  --foreground: #F8FAFC;
+  --primary: #00D2FF;
+  --primary-dark: #0072FF;
+  --accent: #FF7A00;
+}
+
+html, body {
+  background: #050814;
+  color: #F8FAFC;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  letter-spacing: -0.015em;
+}
+
+code, pre, .font-mono {
+  font-family: var(--font-mono), monospace;
+}
+
+/* Glassmorphism Dark Cards with Cyan/Amber Glows */
+.glass-panel {
+  background: rgba(12, 18, 34, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 59, 0.9);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 15px -3px rgba(0, 210, 255, 0.05);
+}
+
+.glass-panel-elevated {
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 210, 255, 0.25);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6), 0 0 25px -4px rgba(0, 210, 255, 0.15);
+}
+
+/* Neon Glows */
+.glow-cyan {
+  box-shadow: 0 0 25px -3px rgba(0, 210, 255, 0.35);
+}
+
+.glow-orange {
+  box-shadow: 0 0 25px -3px rgba(255, 122, 0, 0.35);
+}
+
+.glow-gold {
+  box-shadow: 0 0 25px -3px rgba(245, 158, 11, 0.35);
+}
+
+.text-gradient-cyan {
+  background: linear-gradient(135deg, #FFFFFF 0%, #00D2FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-orange {
+  background: linear-gradient(135deg, #FFB703 0%, #FF6B00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #050814;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00D2FF;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Touch devices tap highlight reset */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
