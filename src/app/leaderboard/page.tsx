@@ -139,9 +139,6 @@ export default function LeaderboardPage() {
                   </div>
                   <div className="flex items-center justify-between text-xs pt-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-amber-300 font-extrabold text-[11px] bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-800/40">
-                        💰 {(top2.ic_balance !== undefined ? top2.ic_balance : 10000).toLocaleString()} IC
-                      </span>
                       {(top2.brownie_points || 0) > 0 && (
                         <span className="text-fuchsia-400 font-bold text-[10px] bg-fuchsia-950/40 px-1.5 py-0.5 rounded-lg border border-fuchsia-800/40">
                           ★ +{top2.brownie_points} BP
@@ -190,9 +187,6 @@ export default function LeaderboardPage() {
                   </div>
                   <div className="flex items-center justify-between text-xs pt-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-amber-300 font-extrabold text-[11px] bg-amber-950/60 px-2 py-0.5 rounded-lg border border-amber-500/40 shadow-[0_0_10px_rgba(251,191,36,0.2)]">
-                        💰 {(top1.ic_balance !== undefined ? top1.ic_balance : 10000).toLocaleString()} IC
-                      </span>
                       {(top1.brownie_points || 0) > 0 && (
                         <span className="text-fuchsia-300 font-black text-[10px] bg-fuchsia-950/60 px-2 py-0.5 rounded-lg border border-fuchsia-500/40">
                           ★ +{top1.brownie_points} BP
@@ -237,9 +231,6 @@ export default function LeaderboardPage() {
                   </div>
                   <div className="flex items-center justify-between text-xs pt-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-amber-300 font-extrabold text-[11px] bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-800/40">
-                        💰 {(top3.ic_balance !== undefined ? top3.ic_balance : 10000).toLocaleString()} IC
-                      </span>
                       {(top3.brownie_points || 0) > 0 && (
                         <span className="text-fuchsia-400 font-bold text-[10px] bg-fuchsia-950/40 px-1.5 py-0.5 rounded-lg border border-fuchsia-800/40">
                           ★ +{top3.brownie_points} BP
@@ -299,7 +290,6 @@ export default function LeaderboardPage() {
                     <th className="py-4 px-2 text-center" title="Round 4: The Resource Auction">R4 (Auction)</th>
                     <th className="py-4 px-2 text-center" title="Round 5: Hidden Insider Challenge">R5 (Insider)</th>
                     <th className="py-4 px-2 text-center" title="Round 6: The Boardroom Showdown">R6 (Pitch)</th>
-                    <th className="py-4 px-3 text-center" title="Innovation Credit Liquid Balance">Liquid IC</th>
                     <th className="py-4 px-3 sm:px-4 text-right">Total Score</th>
                   </tr>
                 </thead>
@@ -384,20 +374,6 @@ export default function LeaderboardPage() {
                         {/* Round 6 */}
                         <td className="py-4 px-2 text-center font-bold text-slate-300">
                           {team.round_6_score !== undefined ? team.round_6_score : '—'}
-                        </td>
-
-                        {/* Liquid IC & Brownie Points */}
-                        <td className="py-4 px-3 text-center">
-                          <div className="inline-flex flex-col items-center">
-                            <span className="font-extrabold text-amber-300 text-xs bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/40 whitespace-nowrap">
-                              💰 {(team.ic_balance !== undefined ? team.ic_balance : 10000).toLocaleString()} IC
-                            </span>
-                            {(team.brownie_points || 0) > 0 && (
-                              <span className="text-[10px] text-fuchsia-400 font-bold mt-0.5">
-                                ★ +{team.brownie_points} BP
-                              </span>
-                            )}
-                          </div>
                         </td>
 
                         {/* Total Score */}
@@ -486,16 +462,13 @@ export default function LeaderboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-800">
-                      <span className="text-amber-300 font-extrabold flex items-center gap-1">
-                        💰 {(team.ic_balance !== undefined ? team.ic_balance : 10000).toLocaleString()} Liquid IC
-                      </span>
-                      {(team.brownie_points || 0) > 0 && (
+                    {(team.brownie_points || 0) > 0 && (
+                      <div className="flex items-center justify-end text-[11px] bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-800">
                         <span className="text-fuchsia-400 font-bold bg-fuchsia-950/40 px-2 py-0.5 rounded border border-fuchsia-800/40">
                           ★ +{team.brownie_points} Brownie Points
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {team.judge_notes && (
                       <p className="text-[10px] text-amber-200/90 italic bg-amber-950/20 p-2 rounded-lg border border-amber-800/30">
