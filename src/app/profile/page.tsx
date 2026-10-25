@@ -44,17 +44,21 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const checkMarket = async () => {
-      if (typeof document !== 'undefined' && document.hidden) return;
       try {
-        const res = await fetch(`${STOCK_MARKET_URL}/api/market/state`)
+        const res = await fetch(`${STOCK_MARKET_URL}/api/market/state`, { cache: 'no-store' })
         const data = await res.json()
         if (data.state) setStockMarketState(data.state)
       } catch {
-        // Stock market server offline
+        // Stock market server offline or spinning up
       }
+      // Direct database verification
+      try {
+        const active = await LocalDB.getActiveHackathon()
+        if (active) setHackathon(active)
+      } catch {}
     }
     checkMarket()
-    const interval = setInterval(checkMarket, 6000)
+    const interval = setInterval(checkMarket, 4000)
     return () => clearInterval(interval)
   }, [])
 
@@ -70,16 +74,16 @@ export default function ProfilePage() {
         const active = await LocalDB.getActiveHackathon()
         setHackathon(active)
         if (active && user) {
-          const reg = await LocalDB.getRegistrationByLeader(user.id, active.id)
+          const reg = await LocalDB.getRegistrationByLeader(user.id, active.id, user.email)
           setRegistration(reg)
           if (!reg) {
-            const allMyRegs = await LocalDB.getRegistrationsByLeaderAsync(user.id)
+            const allMyRegs = await LocalDB.getRegistrationsByLeaderAsync(user.id, user.email)
             if (allMyRegs.length > 0) {
               setRegistration(allMyRegs[0])
             }
           }
         } else if (user) {
-          const allMyRegs = await LocalDB.getRegistrationsByLeaderAsync(user.id)
+          const allMyRegs = await LocalDB.getRegistrationsByLeaderAsync(user.id, user.email)
           if (allMyRegs.length > 0) {
             setRegistration(allMyRegs[0])
           }
@@ -501,123 +505,134 @@ export default function ProfilePage() {
                       )}
 
                       {/* Round 2: Stock Market Trading Portal (ONLY POPS UP ONCE ADMIN RELEASES CREDENTIALS) */}
-                      {registration.status === 'approved' && Boolean(stockMarketState?.credentials_released) && (
-                        <div className="bg-gradient-to-br from-[#07131B] via-[#0B1A28] to-[#0A1220] border-2 border-emerald-500 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(16,185,129,0.3)] space-y-4">
-                          <div className="flex items-center justify-between pb-3 border-b border-emerald-900/60">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
-                                <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
-                              </div>
-                              <div>
-                                <h4 className="font-mono font-black text-white text-sm uppercase tracking-wider">
-                                  ROUND 2: STOCK MARKET TRADING ACCESS
-                                </h4>
-                                <span className="text-[11px] text-emerald-300 font-mono">
-                                  {stockMarketState?.status === 'OPEN' 
-                                    ? 'Trading floor is currently OPEN & LIVE' 
+                      {(() => {
+                        const isCredentialsUnlocked = Boolean(stockMarketState?.credentials_released || hackathon?.credentials_released);
+                        const teamCode = `ARTH-${registration.id.slice(-4).toUpperCase()}`;
+                        const traderPin = registration.utr_reference ? registration.utr_reference.slice(-4) : '1234';
+                        const directLaunchUrl = `${STOCK_MARKET_URL}?code=${encodeURIComponent(teamCode)}&pin=${encodeURIComponent(traderPin)}`;
+
+                        if (registration.status === 'approved' && isCredentialsUnlocked) {
+                          return (
+                            <div className="bg-gradient-to-br from-[#07131B] via-[#0B1A28] to-[#0A1220] border-2 border-emerald-500 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(16,185,129,0.3)] space-y-4">
+                              <div className="flex items-center justify-between pb-3 border-b border-emerald-900/60">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
+                                    <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-mono font-black text-white text-sm uppercase tracking-wider">
+                                      ROUND 2: STOCK MARKET TRADING ACCESS
+                                    </h4>
+                                    <span className="text-[11px] text-emerald-300 font-mono">
+                                      {stockMarketState?.status === 'OPEN' 
+                                        ? 'Trading floor is currently OPEN & LIVE' 
+                                        : stockMarketState?.status === 'PAUSED'
+                                        ? 'Trading floor is currently PAUSED'
+                                        : 'Credentials Released — Ready for Trading'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-black border uppercase ${
+                                  stockMarketState?.status === 'OPEN'
+                                    ? 'bg-emerald-950 text-emerald-400 border-emerald-600 animate-pulse'
                                     : stockMarketState?.status === 'PAUSED'
-                                    ? 'Trading floor is currently PAUSED'
-                                    : 'Credentials Released — Market is currently STANDBY / CLOSED'}
+                                    ? 'bg-amber-950 text-amber-400 border-amber-600'
+                                    : 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
+                                }`}>
+                                  {stockMarketState?.status || 'UNLOCKED'}
                                 </span>
                               </div>
-                            </div>
-                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-black border uppercase ${
-                              stockMarketState?.status === 'OPEN'
-                                ? 'bg-emerald-950 text-emerald-400 border-emerald-600 animate-pulse'
-                                : stockMarketState?.status === 'PAUSED'
-                                ? 'bg-amber-950 text-amber-400 border-amber-600'
-                                : 'bg-slate-900 text-slate-400 border-slate-700'
-                            }`}>
-                              {stockMarketState?.status || 'STANDBY'}
-                            </span>
-                          </div>
 
-                          <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                            Your team has been credited <strong>10,000 IC</strong> starting capital. Copy your credentials below to access the terminal:
-                          </p>
+                              <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                                Your team has been credited <strong>10,000 IC</strong> starting capital. Copy your credentials below to access the terminal:
+                              </p>
 
-                          <div className="grid grid-cols-2 gap-3 font-mono text-xs">
-                            <div className="bg-slate-950/80 border border-slate-800 p-3 rounded-2xl flex items-center justify-between">
-                              <div>
-                                <span className="text-slate-500 block text-[10px] uppercase font-bold">Your Team Code</span>
-                                <span className="text-cyan-400 font-extrabold text-sm tracking-wider">
-                                  {`ARTH-${registration.id.slice(-4).toUpperCase()}`}
+                              <div className="grid grid-cols-2 gap-3 font-mono text-xs">
+                                <div className="bg-slate-950/80 border border-slate-800 p-3 rounded-2xl flex items-center justify-between">
+                                  <div>
+                                    <span className="text-slate-500 block text-[10px] uppercase font-bold">Your Team Code</span>
+                                    <span className="text-cyan-400 font-extrabold text-sm tracking-wider">
+                                      {teamCode}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(teamCode)
+                                      setCopiedCode(true)
+                                      setTimeout(() => setCopiedCode(false), 2000)
+                                    }}
+                                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                                    title="Copy Team Code"
+                                  >
+                                    {copiedCode ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                                  </button>
+                                </div>
+
+                                <div className="bg-slate-950/80 border border-slate-800 p-3 rounded-2xl flex items-center justify-between">
+                                  <div>
+                                    <span className="text-slate-500 block text-[10px] uppercase font-bold">Trader PIN</span>
+                                    <span className="text-emerald-400 font-extrabold text-sm tracking-wider">
+                                      {traderPin}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(traderPin)
+                                      setCopiedPin(true)
+                                      setTimeout(() => setCopiedPin(false), 2000)
+                                    }}
+                                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                                    title="Copy Trader PIN"
+                                  >
+                                    {copiedPin ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="text-[11px] text-amber-300 bg-amber-950/40 p-2.5 rounded-xl border border-amber-800/60 flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                                <span>
+                                  <strong>Trading Rule:</strong> Only the designated <strong>Team Leader</strong> can execute buy/sell orders.
                                 </span>
                               </div>
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(`ARTH-${registration.id.slice(-4).toUpperCase()}`)
-                                  setCopiedCode(true)
-                                  setTimeout(() => setCopiedCode(false), 2000)
-                                }}
-                                className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                                title="Copy Team Code"
+
+                              <a
+                                href={directLaunchUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 hover:from-emerald-400 hover:to-cyan-300 text-slate-950 font-black font-mono text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(16,185,129,0.4)] cursor-pointer"
                               >
-                                {copiedCode ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                              </button>
+                                <span>Enter Stock Market Floor →</span>
+                              </a>
                             </div>
+                          );
+                        }
 
-                            <div className="bg-slate-950/80 border border-slate-800 p-3 rounded-2xl flex items-center justify-between">
-                              <div>
-                                <span className="text-slate-500 block text-[10px] uppercase font-bold">Trader PIN</span>
-                                <span className="text-emerald-400 font-extrabold text-sm tracking-wider">
-                                  {registration.utr_reference ? registration.utr_reference.slice(-4) : '1234'}
-                                </span>
+                        if (registration.status === 'approved' && !isCredentialsUnlocked) {
+                          return (
+                            <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                                  <Lock className="w-4 h-4 text-cyan-400" />
+                                </div>
+                                <div>
+                                  <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                                    Round 2: Stock Market Simulation
+                                  </div>
+                                  <div className="text-[11px] text-slate-400 font-sans">
+                                    Team login codes will be unlocked and displayed here once released by the market coordinators.
+                                  </div>
+                                </div>
                               </div>
-                              <button
-                                onClick={() => {
-                                  const pin = registration.utr_reference ? registration.utr_reference.slice(-4) : '1234'
-                                  navigator.clipboard.writeText(pin)
-                                  setCopiedPin(true)
-                                  setTimeout(() => setCopiedPin(false), 2000)
-                                }}
-                                className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                                title="Copy Trader PIN"
-                              >
-                                {copiedPin ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                              </button>
+                              <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
+                                Credentials Locked
+                              </span>
                             </div>
-                          </div>
+                          );
+                        }
 
-                          <div className="text-[11px] text-amber-300 bg-amber-950/40 p-2.5 rounded-xl border border-amber-800/60 flex items-center gap-2">
-                            <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
-                            <span>
-                              <strong>Trading Rule:</strong> Only the designated <strong>Team Leader</strong> can execute buy/sell orders.
-                            </span>
-                          </div>
-
-                          <a
-                            href={STOCK_MARKET_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 hover:from-emerald-400 hover:to-cyan-300 text-slate-950 font-black font-mono text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(16,185,129,0.4)] cursor-pointer"
-                          >
-                            <span>Enter Stock Market Floor →</span>
-                          </a>
-                        </div>
-                      )}
-
-                      {/* Standby Locked Card if Approved but Credentials Not Released Yet */}
-                      {registration.status === 'approved' && !Boolean(stockMarketState?.credentials_released) && (
-                        <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                              <Lock className="w-4 h-4 text-cyan-400" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                                Round 2: Stock Market Simulation
-                              </div>
-                              <div className="text-[11px] text-slate-400 font-sans">
-                                Team login codes will be unlocked and displayed here once released by the market coordinators.
-                              </div>
-                            </div>
-                          </div>
-                          <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
-                            Credentials Locked
-                          </span>
-                        </div>
-                      )}
+                        return null;
+                      })()}
 
                       {/* Live Scorecard (if approved) */}
                       {registration.status === 'approved' && (

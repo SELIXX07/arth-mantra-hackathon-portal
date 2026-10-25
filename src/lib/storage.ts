@@ -49,6 +49,23 @@ const getSupabase = () => {
   }
 }
 
+// Helper to parse market config out of hackathon
+function parseHackathon(data: any): Hackathon {
+  let credentialsReleased = false
+  if (data.upi_id && typeof data.upi_id === 'string' && data.upi_id.startsWith('MARKET_CONFIG:')) {
+    try {
+      const parsed = JSON.parse(data.upi_id.replace('MARKET_CONFIG:', ''))
+      if (parsed && parsed.credentials_released !== undefined) {
+        credentialsReleased = Boolean(parsed.credentials_released)
+      }
+    } catch (_) {}
+  }
+  return {
+    ...data,
+    credentials_released: credentialsReleased
+  } as Hackathon
+}
+
 export const LocalDB = {
   // ── HACKATHONS (SUPABASE-FIRST) ────────────────────────────────
   async getHackathonsAsync(): Promise<Hackathon[]> {
@@ -61,15 +78,16 @@ export const LocalDB = {
           .order('created_at', { ascending: false })
 
         if (!error && data) {
-          this.saveHackathons(data as Hackathon[])
-          return data as Hackathon[]
+          const parsed = data.map(parseHackathon)
+          this.saveHackathons(parsed)
+          return parsed
         }
         if (error) console.error('Supabase fetch hackathons error:', error.message)
       } catch (err) {
         console.error('Supabase getHackathonsAsync exception:', err)
       }
     }
-    return this.getHackathons()
+    return this.getHackathons().map(parseHackathon)
   },
 
   getHackathons(): Hackathon[] {
@@ -78,7 +96,7 @@ export const LocalDB = {
     if (!stored) return []
     try {
       const raw = JSON.parse(stored)
-      return Array.isArray(raw) ? raw : []
+      return Array.isArray(raw) ? raw.map(parseHackathon) : []
     } catch { return [] }
   },
 
@@ -99,13 +117,14 @@ export const LocalDB = {
           .maybeSingle()
 
         if (!error && data) {
+          const parsed = parseHackathon(data)
           const localOverride = isBrowser() ? localStorage.getItem(`hackreg_show_teams_${data.id}`) : null
           const effectiveShow = localOverride !== null
             ? (localOverride === 'true')
             : (data.show_registered_teams !== undefined && data.show_registered_teams !== null ? data.show_registered_teams : true)
 
           return {
-            ...data,
+            ...parsed,
             show_registered_teams: effectiveShow
           } as Hackathon
         }
@@ -122,7 +141,33 @@ export const LocalDB = {
         active.show_registered_teams = localOverride === 'true'
       }
     }
-    return active
+    return active ? parseHackathon(active) : null
+  },
+
+  async setCredentialsReleased(hackathonId: string, released: boolean): Promise<boolean> {
+    const configStr = `MARKET_CONFIG:${JSON.stringify({ credentials_released: Boolean(released) })}`
+    const supabase = getSupabase()
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('hackathons')
+          .update({ upi_id: configStr })
+          .eq('id', hackathonId)
+        if (!error) {
+          const hackathons = this.getHackathons()
+          const idx = hackathons.findIndex(h => h.id === hackathonId)
+          if (idx !== -1) {
+            hackathons[idx].upi_id = configStr
+            hackathons[idx].credentials_released = Boolean(released)
+            this.saveHackathons(hackathons)
+          }
+          return true
+        }
+      } catch (err) {
+        console.error('Supabase setCredentialsReleased exception:', err)
+      }
+    }
+    return false
   },
 
   async addHackathon(hackathon: Omit<Hackathon, 'id' | 'created_at'>): Promise<Hackathon> {
@@ -313,11 +358,11 @@ export const LocalDB = {
     return this.getRegistrations()
   },
 
-  async getRegistrationByLeader(leaderUserId: string, hackathonId: string): Promise<TeamRegistration | null> {
+  async getRegistrationByLeader(leaderUserId: string, hackathonId: string, email?: string): Promise<TeamRegistration | null> {
     const supabase = getSupabase()
     if (supabase) {
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('team_registrations')
           .select('*')
           .eq('leader_user_id', leaderUserId)
@@ -325,7 +370,36 @@ export const LocalDB = {
           .limit(1)
           .maybeSingle()
 
-        if (!error && data) {
+        // Fallback by email match for leader
+        if ((!data || error) && email) {
+          const res = await supabase
+            .from('team_registrations')
+            .select('*')
+            .ilike('leader_email', email.trim())
+            .eq('hackathon_id', hackathonId)
+            .limit(1)
+            .maybeSingle()
+          if (res.data) data = res.data
+        }
+
+        // Fallback: check if user is a registered team member
+        if ((!data || error) && email) {
+          const res = await supabase
+            .from('team_registrations')
+            .select('*')
+            .eq('hackathon_id', hackathonId)
+          if (res.data && Array.isArray(res.data)) {
+            const memberMatch = res.data.find((r: any) => {
+              if (Array.isArray(r.members)) {
+                return r.members.some((m: any) => m?.email?.toLowerCase() === email.trim().toLowerCase())
+              }
+              return false
+            })
+            if (memberMatch) data = memberMatch
+          }
+        }
+
+        if (data) {
           return parseRegistration(data)
         }
       } catch (err) {
@@ -334,10 +408,13 @@ export const LocalDB = {
     }
     // Fallback to localStorage
     const all = this.getRegistrations()
-    return all.find(r => r.leader_user_id === leaderUserId && r.hackathon_id === hackathonId) || null
+    return all.find(r => 
+      (r.leader_user_id === leaderUserId || (email && r.leader_email?.toLowerCase() === email.toLowerCase())) && 
+      r.hackathon_id === hackathonId
+    ) || null
   },
 
-  async getRegistrationsByLeaderAsync(leaderUserId: string): Promise<TeamRegistration[]> {
+  async getRegistrationsByLeaderAsync(leaderUserId: string, email?: string): Promise<TeamRegistration[]> {
     const supabase = getSupabase()
     if (supabase) {
       try {
@@ -347,15 +424,40 @@ export const LocalDB = {
           .eq('leader_user_id', leaderUserId)
           .order('created_at', { ascending: false })
 
-        if (!error && data) {
+        if (!error && data && data.length > 0) {
           return data.map(parseRegistration)
+        }
+
+        if (email) {
+          const emailRes = await supabase
+            .from('team_registrations')
+            .select('*')
+            .ilike('leader_email', email.trim())
+            .order('created_at', { ascending: false })
+          if (emailRes.data && emailRes.data.length > 0) {
+            return emailRes.data.map(parseRegistration)
+          }
+
+          // Search members
+          const allRes = await supabase.from('team_registrations').select('*')
+          if (allRes.data && Array.isArray(allRes.data)) {
+            const memberMatches = allRes.data.filter((r: any) => {
+              if (Array.isArray(r.members)) {
+                return r.members.some((m: any) => m?.email?.toLowerCase() === email.trim().toLowerCase())
+              }
+              return false
+            })
+            if (memberMatches.length > 0) {
+              return memberMatches.map(parseRegistration)
+            }
+          }
         }
       } catch (err) {
         console.error('Supabase getRegistrationsByLeaderAsync error:', err)
       }
     }
     const all = this.getRegistrations()
-    return all.filter(r => r.leader_user_id === leaderUserId)
+    return all.filter(r => r.leader_user_id === leaderUserId || (email && r.leader_email?.toLowerCase() === email.toLowerCase()))
   },
 
   getRegistrations(): TeamRegistration[] {

@@ -79,6 +79,7 @@ export interface Hackathon {
   whatsapp_link?: string;
   is_active: boolean;
   show_registered_teams?: boolean;
+  credentials_released?: boolean;
   created_by: string;
   created_at: string;
 }

@@ -68,6 +68,7 @@ export default function AdminDashboardPage() {
   const [stockMarketState, setStockMarketState] = useState<{ 
     status: string; 
     remaining_secs: number; 
+    round_duration_secs?: number;
     round_name?: string;
     credentials_released?: boolean | number;
     scheduled_open_at?: number | null;
@@ -77,16 +78,54 @@ export default function AdminDashboardPage() {
 
   const fetchStockMarketState = async () => {
     try {
-      const res = await fetch(`${STOCK_MARKET_URL}/api/market/state`)
+      const res = await fetch(`${STOCK_MARKET_URL}/api/market/state`, { cache: 'no-store' })
       const data = await res.json()
-      if (data.state) setStockMarketState(data.state)
+      if (data.state) {
+        setStockMarketState(data.state)
+        return
+      }
     } catch {
       // offline or disconnected
     }
+
+    // Fallback from active hackathon
+    try {
+      const active = await LocalDB.getActiveHackathon()
+      if (active) {
+        setStockMarketState(prev => ({
+          status: prev?.status || 'STANDBY',
+          round_duration_secs: prev?.round_duration_secs || 3600,
+          remaining_secs: prev?.remaining_secs || 0,
+          credentials_released: active.credentials_released ? 1 : 0
+        }))
+      }
+    } catch {}
   }
 
   const handleToggleCredentials = async (released: boolean) => {
     try {
+      // 1. Immediately persist to database so teams immediately get access
+      const active = hackathonsList.find(h => h.is_active) || (await LocalDB.getActiveHackathon())
+      if (active) {
+        await LocalDB.setCredentialsReleased(active.id, released)
+      }
+
+      // Optimistic local state update
+      setStockMarketState(prev => prev ? { ...prev, credentials_released: released ? 1 : 0 } : {
+        status: 'STANDBY',
+        round_duration_secs: 3600,
+        remaining_secs: 0,
+        credentials_released: released ? 1 : 0
+      })
+      setStockSyncMsg(released ? 'Credentials revealed to teams!' : 'Credentials hidden from teams.')
+      setTimeout(() => setStockSyncMsg(null), 4000)
+
+      // 2. Automatically sync approved teams if releasing
+      if (released) {
+        handleSyncTeamsToStockMarket().catch(() => {})
+      }
+
+      // 3. Notify stock market server
       const res = await fetch(`${STOCK_MARKET_URL}/api/portal/toggle-credentials`, {
         method: 'POST',
         headers: { 
@@ -96,15 +135,12 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({ released, adminSecret: 'Arth20070505' })
       })
       const data = await res.json()
-      if (data.success) {
+      if (data.success && data.state) {
         setStockMarketState(data.state)
-        setStockSyncMsg(released ? 'Credentials revealed to teams!' : 'Credentials hidden from teams.')
-        setTimeout(() => setStockSyncMsg(null), 4000)
-      } else {
-        alert('Action rejected: ' + (data.error || 'Unknown error'))
       }
     } catch (err: any) {
-      alert('Failed to connect to Stock Market server: ' + err.message)
+      // Database is already updated, warn gracefully
+      console.warn('Stock Market server relay notice:', err.message)
     }
   }
 
@@ -116,9 +152,9 @@ export default function AdminDashboardPage() {
         return
       }
 
-      const teamsPayload = approved.map((r, idx) => ({
+      const teamsPayload = approved.map((r) => ({
         id: r.id,
-        team_code: `ARTH-${100 + idx + 1}`,
+        team_code: `ARTH-${r.id.slice(-4).toUpperCase()}`,
         team_name: r.team_name,
         password: r.utr_reference ? r.utr_reference.slice(-4) : '1234',
         leader_name: r.leader_email ? r.leader_email.split('@')[0] : 'Leader',
