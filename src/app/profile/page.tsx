@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import {
   User, Mail, Phone, GraduationCap, Edit3, Save, X, CheckCircle2, Clock, AlertCircle,
   ExternalLink, Users, Trophy, Compass, ArrowRight, MessageSquare, BookOpen, Layers, Bookmark, Building2,
-  Activity, Copy, Check, ShieldCheck, Lock
+  Activity, Copy, Check, ShieldCheck, Lock, Eye, EyeOff
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
@@ -17,7 +17,7 @@ import { Hackathon, TeamRegistration, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, loading: authLoading, updateProfile } = useAuth()
+  const { user, isAdmin, isDev, isMarketAdmin, loading: authLoading, updateProfile } = useAuth()
   const { showToast } = useToast()
 
   const [hackathon, setHackathon] = useState<Hackathon | null>(null)
@@ -41,6 +41,46 @@ export default function ProfilePage() {
   } | null>(null)
   const [copiedCode, setCopiedCode] = useState(false)
   const [copiedPin, setCopiedPin] = useState(false)
+  const [togglingCreds, setTogglingCreds] = useState(false)
+
+  const handleToggleCredentials = async (released: boolean) => {
+    setTogglingCreds(true)
+    try {
+      // 1. Persist directly to Supabase
+      const active = hackathon || (await LocalDB.getActiveHackathon())
+      if (active) {
+        await LocalDB.setCredentialsReleased(active.id, released)
+        setHackathon({ ...active, credentials_released: released })
+      }
+
+      // Optimistic local update
+      setStockMarketState(prev => prev ? { ...prev, credentials_released: released ? 1 : 0 } : {
+        status: 'STANDBY',
+        round_duration_secs: 3600,
+        remaining_secs: 0,
+        credentials_released: released ? 1 : 0
+      })
+
+      showToast(released ? 'Credentials revealed to all approved teams!' : 'Credentials hidden from teams.', released ? 'success' : 'info')
+
+      // 2. Relay to stock market engine
+      const portalSyncKey = process.env.NEXT_PUBLIC_PORTAL_SYNC_SECRET || 'ArthAdmin2026!'
+      fetch(`${STOCK_MARKET_URL}/api/portal/toggle-credentials`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-secret': portalSyncKey
+        },
+        body: JSON.stringify({ released, adminSecret: portalSyncKey })
+      }).then(r => r.json()).then(data => {
+        if (data.state) setStockMarketState(data.state)
+      }).catch(() => {})
+    } catch (err: any) {
+      showToast('Error updating credentials: ' + err.message, 'error')
+    } finally {
+      setTogglingCreds(false)
+    }
+  }
 
   useEffect(() => {
     const checkMarket = async () => {
@@ -182,6 +222,80 @@ export default function ProfilePage() {
           <h1 className="text-2xl sm:text-3xl font-black text-white">Participant Dashboard</h1>
           <p className="text-xs text-slate-400 mt-0.5">Manage your personal credentials & view your team&apos;s status</p>
         </div>
+
+        {/* Admin Quick Control Banner (visible to Admins/Superadmins/Market Admins) */}
+        {(isAdmin || isMarketAdmin || isDev) && (
+          <div className={`p-4 sm:p-5 rounded-3xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl ${
+            stockMarketState?.credentials_released || hackathon?.credentials_released
+              ? 'bg-gradient-to-r from-emerald-950/90 via-[#0B211E] to-[#0A1220] border-emerald-500/80 shadow-[0_0_30px_rgba(16,185,129,0.25)]'
+              : 'bg-gradient-to-r from-[#0C1427] via-[#0E1726] to-[#0A1220] border-slate-700 shadow-md'
+          }`}>
+            <div className="flex items-center gap-3.5">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                stockMarketState?.credentials_released || hackathon?.credentials_released
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                  : 'bg-slate-800/80 border-slate-700 text-slate-400'
+              }`}>
+                {stockMarketState?.credentials_released || hackathon?.credentials_released ? (
+                  <Eye className="w-6 h-6 text-emerald-400 animate-pulse" />
+                ) : (
+                  <EyeOff className="w-6 h-6 text-slate-400" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#00D2FF] bg-cyan-950/80 border border-cyan-800 px-2 py-0.5 rounded-full">
+                    Admin Quick Control
+                  </span>
+                  <h3 className="font-mono font-black text-white text-sm sm:text-base uppercase tracking-wider">
+                    Stock Market Credentials
+                  </h3>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black border uppercase ${
+                    stockMarketState?.credentials_released || hackathon?.credentials_released
+                      ? 'bg-emerald-950 text-emerald-400 border-emerald-600 animate-pulse'
+                      : 'bg-rose-950 text-rose-400 border-rose-800'
+                  }`}>
+                    {stockMarketState?.credentials_released || hackathon?.credentials_released ? '● Revealed to Teams' : '○ Hidden from Teams'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  {stockMarketState?.credentials_released || hackathon?.credentials_released
+                    ? 'All approved teams can currently see their Team Codes, Trader PINs, and 1-click Trading Link.'
+                    : 'Credentials are currently concealed from teams. Click Reveal when ready for teams to prepare.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+              <button
+                type="button"
+                disabled={togglingCreds}
+                onClick={() => handleToggleCredentials(!Boolean(stockMarketState?.credentials_released || hackathon?.credentials_released))}
+                className={`py-2.5 px-5 rounded-xl font-mono font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-lg disabled:opacity-50 ${
+                  stockMarketState?.credentials_released || hackathon?.credentials_released
+                    ? 'bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-700 hover:shadow-rose-900/30'
+                    : 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-emerald-900/40'
+                }`}
+              >
+                {stockMarketState?.credentials_released || hackathon?.credentials_released ? (
+                  <>
+                    <EyeOff className="w-4 h-4" /> Hide Credentials from Teams
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4" /> Reveal Credentials to Teams
+                  </>
+                )}
+              </button>
+              <Link
+                href="/admin"
+                className="py-2.5 px-4 rounded-xl font-mono font-bold text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <ShieldCheck className="w-4 h-4 text-[#00D2FF]" /> Admin Console
+              </Link>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Left — Profile Card */}
