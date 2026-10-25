@@ -19,7 +19,6 @@ export default function HomePage() {
   const { showToast } = useToast()
   const [hackathon, setHackathon] = useState<Hackathon | null>(null)
   const [approvedCount, setApprovedCount] = useState(0)
-  const [topTeams, setTopTeams] = useState<TeamRegistration[]>([])
   const [myRegistration, setMyRegistration] = useState<TeamRegistration | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -58,10 +57,6 @@ export default function HomePage() {
         const regs = await LocalDB.getRegistrationsAsync()
         const approved = regs.filter(r => (active ? r.hackathon_id === active.id : true) && r.status === 'approved')
         setApprovedCount(approved.length)
-
-        // Top 3 for live scoreboard snippet
-        const sorted = [...approved].sort((a, b) => (b.score || 0) - (a.score || 0))
-        setTopTeams(sorted.slice(0, 3))
 
         if (user && !isAdmin && active) {
           const myReg = await LocalDB.getRegistrationByLeader(user.id, active.id)
@@ -504,61 +499,6 @@ export default function HomePage() {
               </div>
             </motion.div>
           </>
-        )}
-
-        {/* Live Leaderboard Snippet Widget */}
-        {topTeams.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-[#0C1222]/80 backdrop-blur-md rounded-3xl p-6 sm:p-7 border border-slate-800 shadow-xl space-y-4"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-[#FF7A00]" />
-                <h3 className="text-lg font-black text-white">Live Leaderboard Preview</h3>
-              </div>
-              <Link
-                href="/leaderboard"
-                className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-              >
-                Full Rankings <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {topTeams.map((team, idx) => {
-                const rank = idx + 1
-                return (
-                  <div
-                    key={team.id}
-                    className="bg-[#080E1C] p-4 rounded-2xl border border-slate-800 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs ${
-                        rank === 1
-                          ? 'bg-[#FF7A00] text-slate-950'
-                          : rank === 2
-                          ? 'bg-slate-300 text-slate-950'
-                          : 'bg-amber-700 text-amber-100'
-                      }`}>
-                        #{rank}
-                      </span>
-                      <div>
-                        <div className="text-xs font-black text-white truncate max-w-[120px]">{team.team_name}</div>
-                        <div className="text-[10px] text-slate-400">{team.members?.length} members</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-black text-[#00D2FF]">{team.score || 0} pts</div>
-                      <div className="text-[10px] text-slate-500">Evaluation</div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </motion.div>
         )}
       </div>
     </div>
