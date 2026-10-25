@@ -87,16 +87,21 @@ export default function AdminDashboardPage() {
 
   const handleToggleCredentials = async (released: boolean) => {
     try {
-      const res = await fetch(`${STOCK_MARKET_URL}/api/admin/toggle-credentials`, {
+      const res = await fetch(`${STOCK_MARKET_URL}/api/portal/toggle-credentials`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ released })
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-secret': 'Arth20070505'
+        },
+        body: JSON.stringify({ released, adminSecret: 'Arth20070505' })
       })
       const data = await res.json()
       if (data.success) {
         setStockMarketState(data.state)
         setStockSyncMsg(released ? 'Credentials revealed to teams!' : 'Credentials hidden from teams.')
         setTimeout(() => setStockSyncMsg(null), 4000)
+      } else {
+        alert('Action rejected: ' + (data.error || 'Unknown error'))
       }
     } catch (err: any) {
       alert('Failed to connect to Stock Market server: ' + err.message)
@@ -120,15 +125,20 @@ export default function AdminDashboardPage() {
         leader_email: r.leader_email
       }))
 
-      const res = await fetch(`${STOCK_MARKET_URL}/api/admin/sync-teams`, {
+      const res = await fetch(`${STOCK_MARKET_URL}/api/portal/sync-teams`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teams: teamsPayload })
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-secret': 'Arth20070505'
+        },
+        body: JSON.stringify({ teams: teamsPayload, adminSecret: 'Arth20070505' })
       })
       const data = await res.json()
       if (data.success) {
         setStockSyncMsg(`Successfully synced ${data.syncedCount} approved teams to Stock Market Platform!`)
         setTimeout(() => setStockSyncMsg(null), 4000)
+      } else {
+        alert('Sync rejected: ' + (data.error || 'Unknown error'))
       }
     } catch (err: any) {
       alert('Failed to sync teams. Make sure Stock Market server is running: ' + err.message)
