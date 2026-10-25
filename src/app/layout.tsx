@@ -38,7 +38,15 @@ export const metadata: Metadata = {
   title: "ARTH MANTRA — PES University Hackathon & Live Score Tracker",
   description: "Official Hackathon portal for Arth Mantra: Strategy Meets Finance at PES University. Register teams, verify payments, and track live scores.",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
 };
 
@@ -50,6 +58,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`h-full overflow-x-hidden bg-[#050814] ${plusJakarta.variable} ${outfit.variable} ${jetbrainsMono.variable}`}>
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
