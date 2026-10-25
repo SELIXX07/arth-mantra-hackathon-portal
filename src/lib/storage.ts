@@ -51,10 +51,11 @@ const getSupabase = () => {
 
 // Helper to parse market config out of hackathon
 function parseHackathon(data: any): Hackathon {
-  let credentialsReleased = false
-  if (data.upi_id && typeof data.upi_id === 'string' && data.upi_id.startsWith('MARKET_CONFIG:')) {
+  let credentialsReleased = Boolean(data.credentials_released)
+  if (data.upi_id && typeof data.upi_id === 'string' && data.upi_id.includes('MARKET_CONFIG:')) {
     try {
-      const parsed = JSON.parse(data.upi_id.replace('MARKET_CONFIG:', ''))
+      const jsonStr = data.upi_id.substring(data.upi_id.indexOf('MARKET_CONFIG:') + 'MARKET_CONFIG:'.length)
+      const parsed = JSON.parse(jsonStr)
       if (parsed && parsed.credentials_released !== undefined) {
         credentialsReleased = Boolean(parsed.credentials_released)
       }

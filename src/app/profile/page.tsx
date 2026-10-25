@@ -507,11 +507,12 @@ export default function ProfilePage() {
                       {/* Round 2: Stock Market Trading Portal (ONLY POPS UP ONCE ADMIN RELEASES CREDENTIALS) */}
                       {(() => {
                         const isCredentialsUnlocked = Boolean(stockMarketState?.credentials_released || hackathon?.credentials_released);
+                        const isApproved = String(registration?.status || '').toLowerCase().trim() === 'approved';
                         const teamCode = `ARTH-${registration.id.slice(-4).toUpperCase()}`;
                         const traderPin = registration.utr_reference ? registration.utr_reference.slice(-4) : '1234';
                         const directLaunchUrl = `${STOCK_MARKET_URL}?code=${encodeURIComponent(teamCode)}&pin=${encodeURIComponent(traderPin)}`;
 
-                        if (registration.status === 'approved' && isCredentialsUnlocked) {
+                        if (isApproved && isCredentialsUnlocked) {
                           return (
                             <div className="bg-gradient-to-br from-[#07131B] via-[#0B1A28] to-[#0A1220] border-2 border-emerald-500 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(16,185,129,0.3)] space-y-4">
                               <div className="flex items-center justify-between pb-3 border-b border-emerald-900/60">

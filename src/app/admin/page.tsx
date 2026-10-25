@@ -65,6 +65,28 @@ export default function AdminDashboardPage() {
   )
 
   const [activeTab, setActiveTab] = useState<'registrations' | 'scores' | 'stock_market' | 'hackathons' | 'admins'>('registrations')
+  const [registrations, setRegistrations] = useState<TeamRegistration[]>([])
+  const [adminsList, setAdminsList] = useState<AdminUser[]>([])
+  const [hackathonsList, setHackathonsList] = useState<Hackathon[]>([])
+  const [allProfiles, setAllProfiles] = useState<UserProfile[]>([])
+  const [selectedHackathonFilter, setSelectedHackathonFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'name_asc' | 'dept_asc' | 'sem_asc' | 'sec_asc'>('date_desc')
+  const [regDeptFilter, setRegDeptFilter] = useState<string>('all')
+  const [regSemFilter, setRegSemFilter] = useState<string>('all')
+  const [regSecFilter, setRegSecFilter] = useState<string>('all')
+  const [regResidenceFilter, setRegResidenceFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [userSearchQuery, setUserSearchQuery] = useState('')
+  const [profileSortBy, setProfileSortBy] = useState<'name_asc' | 'date_desc' | 'dept_asc' | 'sem_asc' | 'sec_asc'>('name_asc')
+  const [profileDeptFilter, setProfileDeptFilter] = useState<string>('all')
+  const [profileSemFilter, setProfileSemFilter] = useState<string>('all')
+  const [profileSecFilter, setProfileSecFilter] = useState<string>('all')
+  const [profileResidenceFilter, setProfileResidenceFilter] = useState<string>('all')
+  const [selectedUserToPromote, setSelectedUserToPromote] = useState<string>('')
+  const [isPromoting, setIsPromoting] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
+  const [dataLoading, setDataLoading] = useState(true)
+
   const [stockMarketState, setStockMarketState] = useState<{ 
     status: string; 
     remaining_secs: number; 
@@ -182,27 +204,6 @@ export default function AdminDashboardPage() {
       alert('Failed to sync teams. Make sure Stock Market server is running: ' + err.message)
     }
   }
-  const [registrations, setRegistrations] = useState<TeamRegistration[]>([])
-  const [adminsList, setAdminsList] = useState<AdminUser[]>([])
-  const [hackathonsList, setHackathonsList] = useState<Hackathon[]>([])
-  const [allProfiles, setAllProfiles] = useState<UserProfile[]>([])
-  const [selectedHackathonFilter, setSelectedHackathonFilter] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'name_asc' | 'dept_asc' | 'sem_asc' | 'sec_asc'>('date_desc')
-  const [regDeptFilter, setRegDeptFilter] = useState<string>('all')
-  const [regSemFilter, setRegSemFilter] = useState<string>('all')
-  const [regSecFilter, setRegSecFilter] = useState<string>('all')
-  const [regResidenceFilter, setRegResidenceFilter] = useState<string>('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [userSearchQuery, setUserSearchQuery] = useState('')
-  const [profileSortBy, setProfileSortBy] = useState<'name_asc' | 'date_desc' | 'dept_asc' | 'sem_asc' | 'sec_asc'>('name_asc')
-  const [profileDeptFilter, setProfileDeptFilter] = useState<string>('all')
-  const [profileSemFilter, setProfileSemFilter] = useState<string>('all')
-  const [profileSecFilter, setProfileSecFilter] = useState<string>('all')
-  const [profileResidenceFilter, setProfileResidenceFilter] = useState<string>('all')
-  const [selectedUserToPromote, setSelectedUserToPromote] = useState<string>('')
-  const [isPromoting, setIsPromoting] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
-  const [dataLoading, setDataLoading] = useState(true)
 
   // Modals & expansions
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null)
@@ -2289,7 +2290,7 @@ export default function AdminDashboardPage() {
                     {registrations
                       .filter(r => r.status === 'approved')
                       .map((reg, idx) => {
-                        const teamCode = `ARTH-${100 + idx + 1}`
+                        const teamCode = `ARTH-${reg.id.slice(-4).toUpperCase()}`
                         const pin = reg.utr_reference ? reg.utr_reference.slice(-4) : '1234'
                         return (
                           <tr key={reg.id} className="hover:bg-slate-900/40">
