@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 
 export const DEV_UUID = '1d2ed178-2db2-4f93-8d51-8ee51e17075c'
 export const DEV_EMAIL = 'artharambachalil@gmail.com'
-export const DEV_DEFAULT_PASSWORD = 'Arth20070505'
+export const DEV_DEFAULT_PASSWORD = process.env.NEXT_PUBLIC_DEV_PASSWORD || 'ArthAdmin2026!'
 
 export const INITIAL_SUPERADMIN: AdminUser = {
   id: 'admin-' + DEV_UUID.substring(0, 8),
@@ -13,7 +13,7 @@ export const INITIAL_SUPERADMIN: AdminUser = {
   role: 'superadmin',
   added_by: 'system',
   first_login_pending: false,
-  temporary_password: DEV_DEFAULT_PASSWORD,
+  temporary_password: undefined,
   created_at: new Date('2026-01-01T00:00:00Z').toISOString()
 }
 

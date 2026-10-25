@@ -125,14 +125,15 @@ export default function AdminDashboardPage() {
         handleSyncTeamsToStockMarket().catch(() => {})
       }
 
+      const portalSyncKey = process.env.NEXT_PUBLIC_PORTAL_SYNC_SECRET || 'ArthAdmin2026!'
       // 3. Notify stock market server
       const res = await fetch(`${STOCK_MARKET_URL}/api/portal/toggle-credentials`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-admin-secret': 'Arth20070505'
+          'x-admin-secret': portalSyncKey
         },
-        body: JSON.stringify({ released, adminSecret: 'Arth20070505' })
+        body: JSON.stringify({ released, adminSecret: portalSyncKey })
       })
       const data = await res.json()
       if (data.success && data.state) {
@@ -161,13 +162,14 @@ export default function AdminDashboardPage() {
         leader_email: r.leader_email
       }))
 
+      const portalSyncKey = process.env.NEXT_PUBLIC_PORTAL_SYNC_SECRET || 'ArthAdmin2026!'
       const res = await fetch(`${STOCK_MARKET_URL}/api/portal/sync-teams`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-admin-secret': 'Arth20070505'
+          'x-admin-secret': portalSyncKey
         },
-        body: JSON.stringify({ teams: teamsPayload, adminSecret: 'Arth20070505' })
+        body: JSON.stringify({ teams: teamsPayload, adminSecret: portalSyncKey })
       })
       const data = await res.json()
       if (data.success) {

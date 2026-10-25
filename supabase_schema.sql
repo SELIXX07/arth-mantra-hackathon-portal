@@ -112,8 +112,8 @@ CREATE TABLE public.admin_users (
 
 -- Seed Dev / Superadmin
 INSERT INTO public.admin_users (id, email, name, role, added_by, temporary_password, first_login_pending)
-VALUES ('admin-dev', 'artharambachalil@gmail.com', 'Arth', 'superadmin', 'system', 'Arth20070505', FALSE)
-ON CONFLICT (email) DO UPDATE SET role = 'superadmin', temporary_password = 'Arth20070505';
+VALUES ('admin-dev', 'artharambachalil@gmail.com', 'Arth', 'superadmin', 'system', NULL, FALSE)
+ON CONFLICT (email) DO UPDATE SET role = 'superadmin', temporary_password = NULL;
 
 -- Row Level Security
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -161,5 +161,5 @@ CREATE POLICY "Public Screenshot Delete" ON storage.objects FOR DELETE USING (bu
 
 -- NOTE: After running this schema:
 -- 1. Go to Supabase Storage and create a bucket named "payment-screenshots" (public)
--- 2. Dev account is artharambachalil@gmail.com with password Arth20070505
+-- 2. Dev account is artharambachalil@gmail.com
 -- 3. Fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY in .env.local
