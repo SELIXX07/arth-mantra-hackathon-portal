@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
-import { LocalDB } from '@/lib/storage'
+import { LocalDB, getTeamTraderPin } from '@/lib/storage'
 import { STOCK_MARKET_URL } from '@/lib/config'
 import { Hackathon, TeamRegistration, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ResidenceType } from '@/types'
 
@@ -623,7 +623,7 @@ export default function ProfilePage() {
                         const isCredentialsUnlocked = Boolean(stockMarketState?.credentials_released || hackathon?.credentials_released);
                         const isApproved = String(registration?.status || '').toLowerCase().trim() === 'approved';
                         const teamCode = `ARTH-${registration.id.slice(-4).toUpperCase()}`;
-                        const traderPin = registration.utr_reference ? registration.utr_reference.slice(-4) : '1234';
+                        const traderPin = getTeamTraderPin(registration);
                         const directLaunchUrl = `${STOCK_MARKET_URL}?code=${encodeURIComponent(teamCode)}&pin=${encodeURIComponent(traderPin)}`;
 
                         if (isApproved && isCredentialsUnlocked) {

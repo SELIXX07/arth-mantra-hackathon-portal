@@ -49,6 +49,24 @@ const getSupabase = () => {
   }
 }
 
+// Helper to generate a unique, deterministic 4-digit PIN for each team
+export function getTeamTraderPin(reg: { id: string; utr_reference?: string | null }): string {
+  if (reg.utr_reference) {
+    const digits = reg.utr_reference.replace(/\D/g, '')
+    if (digits.length >= 4) {
+      return digits.slice(-4)
+    }
+  }
+  let hash = 0
+  const str = reg.id || 'team'
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
+  }
+  const pin = 1000 + (Math.abs(hash) % 9000)
+  return pin.toString()
+}
+
 // Helper to parse market config out of hackathon
 function parseHackathon(data: any): Hackathon {
   let credentialsReleased = Boolean(data.credentials_released)

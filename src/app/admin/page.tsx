@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
-import { LocalDB, exportRegistrationsToExcel, exportLeaderboardToExcel, exportFilteredMembersToExcel, exportProfilesToExcel, PRESET_ARTH_MANTRA } from '@/lib/storage'
+import { LocalDB, getTeamTraderPin, exportRegistrationsToExcel, exportLeaderboardToExcel, exportFilteredMembersToExcel, exportProfilesToExcel, PRESET_ARTH_MANTRA } from '@/lib/storage'
 import { STOCK_MARKET_URL } from '@/lib/config'
 import { TeamRegistration, AdminUser, Hackathon, UserRole, UserProfile, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ProblemStatement } from '@/types'
 import Link from 'next/link'
@@ -181,7 +181,7 @@ export default function AdminDashboardPage() {
         id: r.id,
         team_code: `ARTH-${r.id.slice(-4).toUpperCase()}`,
         team_name: r.team_name,
-        password: r.utr_reference ? r.utr_reference.slice(-4) : '1234',
+        password: getTeamTraderPin(r),
         leader_name: r.leader_email ? r.leader_email.split('@')[0] : 'Leader',
         leader_email: r.leader_email
       }))
@@ -2402,7 +2402,7 @@ export default function AdminDashboardPage() {
                       .filter(r => r.status === 'approved')
                       .map((reg, idx) => {
                         const teamCode = `ARTH-${reg.id.slice(-4).toUpperCase()}`
-                        const pin = reg.utr_reference ? reg.utr_reference.slice(-4) : '1234'
+                        const pin = getTeamTraderPin(reg)
                         return (
                           <tr key={reg.id} className="hover:bg-slate-900/40">
                             <td className="py-2.5 px-3 text-slate-500">{idx + 1}</td>
