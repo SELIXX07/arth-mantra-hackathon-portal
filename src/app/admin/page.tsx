@@ -139,7 +139,9 @@ export default function AdminDashboardPage() {
         remaining_secs: 0,
         credentials_released: released ? 1 : 0
       })
-      setStockSyncMsg(released ? 'Credentials revealed to teams!' : 'Credentials hidden from teams.')
+      const msg = released ? 'Credentials revealed to all approved teams!' : 'Credentials hidden from teams.'
+      setStockSyncMsg(msg)
+      showToast(msg, released ? 'success' : 'info')
       setTimeout(() => setStockSyncMsg(null), 4000)
 
       // 2. Automatically sync approved teams if releasing
@@ -292,6 +294,7 @@ export default function AdminDashboardPage() {
       setAdminsList(admins)
       setHackathonsList(hacks)
       setAllProfiles(profiles)
+      fetchStockMarketState().catch(() => {})
     } finally {
       if (!isBackground) setDataLoading(false)
       setIsLiveSyncing(false)
@@ -301,9 +304,11 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (!authLoading && isAdmin) {
       loadData(false)
+      fetchStockMarketState().catch(() => {})
       const interval = setInterval(() => {
         loadData(true)
-      }, 60000)
+        fetchStockMarketState().catch(() => {})
+      }, 15000)
       return () => clearInterval(interval)
     }
   }, [isAdmin, authLoading])
@@ -1095,7 +1100,7 @@ export default function AdminDashboardPage() {
             </h1>
           </div>
 
-          {/* Tab switchers */}
+          {/* Tab switchers & Quick Action */}
           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 max-w-full no-scrollbar flex-nowrap sm:flex-wrap">
             <button
               onClick={() => setActiveTab('registrations')}
@@ -1152,12 +1157,118 @@ export default function AdminDashboardPage() {
                 <ShieldAlert className="w-4 h-4 text-[#00D2FF]" /> Manage Admins (Dev)
               </button>
             )}
+
+            {/* Global Header Reveal / Hide Credentials Button */}
+            <button
+              onClick={() => handleToggleCredentials(!Boolean(stockMarketState?.credentials_released))}
+              title={stockMarketState?.credentials_released ? "Click to hide credentials from teams" : "Click to reveal credentials to approved teams"}
+              className={`py-2 px-3 sm:px-3.5 rounded-xl text-xs font-mono font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-md ${
+                stockMarketState?.credentials_released
+                  ? 'bg-emerald-950/90 hover:bg-rose-950 text-emerald-300 hover:text-rose-300 border border-emerald-600 hover:border-rose-600 group'
+                  : 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white animate-pulse'
+              }`}
+            >
+              {stockMarketState?.credentials_released ? (
+                <>
+                  <Eye className="w-4 h-4 text-emerald-400 group-hover:hidden" />
+                  <EyeOff className="w-4 h-4 text-rose-400 hidden group-hover:inline" />
+                  <span className="group-hover:hidden">Credentials Released</span>
+                  <span className="hidden group-hover:inline">Hide Credentials</span>
+                </>
+              ) : (
+                <>
+                  <KeyRound className="w-4 h-4" /> Reveal Credentials
+                </>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Global Stock Market Notification Alert */}
+        {stockSyncMsg && (
+          <div className="p-3.5 rounded-2xl bg-emerald-950/90 border border-emerald-600 text-emerald-200 text-xs font-mono flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>{stockSyncMsg}</span>
+            </div>
+            <button onClick={() => setStockSyncMsg(null)} className="text-slate-400 hover:text-white cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* ── TAB 1: REGISTRATIONS & APPROVALS ──────────────────────── */}
         {activeTab === 'registrations' && (
           <div className="space-y-6">
+            {/* Round 2: Stock Market Credentials Release Banner on Main Registration Page */}
+            <div className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl ${
+              stockMarketState?.credentials_released
+                ? 'bg-gradient-to-r from-emerald-950/90 via-[#091E1C] to-[#0A1220] border-emerald-500/80 shadow-[0_0_25px_rgba(16,185,129,0.25)]'
+                : 'bg-gradient-to-r from-[#0C1427] via-[#0E1726] to-[#0A1220] border-slate-700 shadow-md'
+            }`}>
+              <div className="flex items-center gap-3.5">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                  stockMarketState?.credentials_released
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                    : 'bg-slate-800/80 border-slate-700 text-slate-400'
+                }`}>
+                  {stockMarketState?.credentials_released ? (
+                    <Eye className="w-6 h-6 text-emerald-400 animate-pulse" />
+                  ) : (
+                    <EyeOff className="w-6 h-6 text-slate-400" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-mono font-black text-white text-sm sm:text-base uppercase tracking-wider">
+                      Stock Market Trading Credentials
+                    </h3>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black border uppercase ${
+                      stockMarketState?.credentials_released
+                        ? 'bg-emerald-950 text-emerald-400 border-emerald-600 animate-pulse'
+                        : 'bg-rose-950 text-rose-400 border-rose-800'
+                    }`}>
+                      {stockMarketState?.credentials_released ? '● Revealed to Teams' : '○ Hidden from Teams'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1">
+                    {stockMarketState?.credentials_released
+                      ? 'Approved teams can view their Team Codes, Trader PINs, and 1-click Trading Link on their profile.'
+                      : 'Credentials are currently concealed from teams. Click Reveal when ready for teams to prepare their login.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleToggleCredentials(!Boolean(stockMarketState?.credentials_released))}
+                  className={`py-2.5 px-5 rounded-xl font-mono font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-lg ${
+                    stockMarketState?.credentials_released
+                      ? 'bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-700 hover:shadow-rose-900/30'
+                      : 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-emerald-900/40'
+                  }`}
+                >
+                  {stockMarketState?.credentials_released ? (
+                    <>
+                      <EyeOff className="w-4 h-4" /> Hide Credentials from Teams
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4" /> Reveal Credentials to Teams
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSyncTeamsToStockMarket}
+                  title="Force re-sync all approved teams to stock market"
+                  className="py-2.5 px-3.5 rounded-xl font-mono font-bold text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Sync Teams
+                </button>
+              </div>
+            </div>
             {/* Stats Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <div className="bg-[#0C1222] p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-md">
