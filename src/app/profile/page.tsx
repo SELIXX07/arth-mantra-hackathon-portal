@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import {
   User, Mail, Phone, GraduationCap, Edit3, Save, X, CheckCircle2, Clock, AlertCircle,
   ExternalLink, Users, Trophy, Compass, ArrowRight, MessageSquare, BookOpen, Layers, Bookmark, Building2,
-  Activity, Copy, Check, ShieldCheck, Lock, Eye, EyeOff
+  Activity, Copy, Check, ShieldCheck, Lock, Eye, EyeOff, Download, FileSpreadsheet
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
@@ -527,98 +527,236 @@ export default function ProfilePage() {
                         </a>
                       )}
 
-                      {/* ASSIGNED PROBLEM STATEMENT (CONFIDENTIAL - ONLY VIEWABLE BY THIS TEAM) */}
+                      {/* ASSIGNED PROBLEM STATEMENT (CONFIDENTIAL - ONLY VIEWABLE ONCE REVEALED BY ADMIN) */}
                       {registration.status === 'approved' && (
-                        registration.assigned_problem_statement ? (
-                          <div className="bg-gradient-to-br from-[#0C1222] via-[#0E162A] to-[#0A1020] border-2 border-indigo-500/50 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(99,102,241,0.2)] space-y-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-indigo-900/50">
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-                                  <BookOpen className="w-4 h-4" />
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="font-mono font-black text-white text-sm uppercase tracking-wider">
-                                      Assigned Problem Statement
-                                    </h4>
-                                    <span className="px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 text-[10px] font-mono font-black border border-indigo-700 uppercase">
-                                      {registration.assigned_problem_statement.track}
+                        Boolean(hackathon?.ps_released) ? (
+                          registration.assigned_problem_statement ? (
+                            <div className="bg-gradient-to-br from-[#0C1222] via-[#0E162A] to-[#0A1020] border-2 border-indigo-500/50 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(99,102,241,0.2)] space-y-4">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-indigo-900/50">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                                    <BookOpen className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-mono font-black text-white text-sm uppercase tracking-wider">
+                                        Assigned Problem Statement
+                                      </h4>
+                                      <span className="px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 text-[10px] font-mono font-black border border-indigo-700 uppercase">
+                                        {registration.assigned_problem_statement.track}
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] text-indigo-300/80 font-mono">
+                                      Confidential Briefing • Allocated exclusively to your squad
                                     </span>
                                   </div>
-                                  <span className="text-[11px] text-indigo-300/80 font-mono">
-                                    Confidential Briefing • Allocated exclusively to your squad
-                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-950/60 border border-rose-800 text-rose-300 text-[10px] font-mono font-bold self-start sm:self-auto">
+                                  <Lock className="w-3 h-3 text-rose-400" /> Private Team Briefing
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-950/60 border border-rose-800 text-rose-300 text-[10px] font-mono font-bold self-start sm:self-auto">
-                                <Lock className="w-3 h-3 text-rose-400" /> Private Team Briefing
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <h3 className="text-base sm:text-lg font-black text-white leading-snug">
-                                {registration.assigned_problem_statement.title}
-                              </h3>
-                              <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-line">
-                                {registration.assigned_problem_statement.description}
-                              </p>
-                            </div>
-
-                            {registration.assigned_problem_statement.deliverables && (
-                              <div className="p-3.5 rounded-2xl bg-[#080E1C] border border-slate-800 space-y-1.5">
-                                <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1.5 font-mono">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Key Deliverables Expected:
-                                </span>
-                                <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-line font-sans">
-                                  {registration.assigned_problem_statement.deliverables}
+                              <div className="space-y-2">
+                                <h3 className="text-base sm:text-lg font-black text-white leading-snug">
+                                  {registration.assigned_problem_statement.title}
+                                </h3>
+                                <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-line">
+                                  {registration.assigned_problem_statement.description}
                                 </p>
                               </div>
-                            )}
 
-                            {registration.assigned_problem_statement.resources && (
-                              <div className="pt-1">
-                                <a
-                                  href={registration.assigned_problem_statement.resources}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 hover:underline"
-                                >
-                                  <ExternalLink className="w-3.5 h-3.5" /> Problem Briefing Documentation & Reference Material →
-                                </a>
+                              {registration.assigned_problem_statement.deliverables && (
+                                <div className="p-3.5 rounded-2xl bg-[#080E1C] border border-slate-800 space-y-1.5">
+                                  <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1.5 font-mono">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Key Deliverables Expected:
+                                  </span>
+                                  <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-line font-sans">
+                                    {registration.assigned_problem_statement.deliverables}
+                                  </p>
+                                </div>
+                              )}
+
+                              {registration.assigned_problem_statement.pdf_url && (
+                                <div className="pt-2">
+                                  <a
+                                    href={registration.assigned_problem_statement.pdf_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download={registration.assigned_problem_statement.pdf_name || 'Problem_Statement.pdf'}
+                                    className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-mono font-bold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] cursor-pointer"
+                                  >
+                                    <Download className="w-4 h-4" /> Download Problem Statement PDF ({registration.assigned_problem_statement.pdf_name || 'Document'})
+                                  </a>
+                                </div>
+                              )}
+
+                              {registration.assigned_problem_statement.resources && (
+                                <div className="pt-1">
+                                  <a
+                                    href={registration.assigned_problem_statement.resources}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 hover:underline"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" /> Problem Briefing Documentation & Reference Material →
+                                  </a>
+                                </div>
+                              )}
+
+                              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 font-mono flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                                <span>
+                                  <strong>Confidentiality Policy:</strong> Sharing your assigned statement or valuation models with other squads leads to immediate disqualification.
+                                </span>
                               </div>
-                            )}
-
-                            <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 font-mono flex items-center gap-2">
-                              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                              <span>
-                                <strong>Confidentiality Policy:</strong> Sharing your assigned statement or valuation models with other squads leads to immediate disqualification.
+                            </div>
+                          ) : (
+                            <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                                  <BookOpen className="w-4 h-4 text-indigo-400" />
+                                </div>
+                                <div>
+                                  <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                                    Round 1: Problem Statement Briefing
+                                  </div>
+                                  <div className="text-[11px] text-slate-400 font-sans">
+                                    Your squad&apos;s confidential problem statement is currently being assigned by the organizing committee.
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
+                                Awaiting Allocation
                               </span>
                             </div>
-                          </div>
+                          )
                         ) : (
                           <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                                <BookOpen className="w-4 h-4 text-indigo-400" />
+                                <Lock className="w-4 h-4 text-indigo-400" />
                               </div>
                               <div>
                                 <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                                  Track Problem Statement Allocation
+                                  Round 1: Problem Statement Briefing
                                 </div>
                                 <div className="text-[11px] text-slate-400 font-sans">
-                                  Your squad&apos;s confidential problem statement will be assigned and unlocked here by the organizing committee.
+                                  Problem statements have not been revealed yet. Once unlocked by the organizing committee, your squad&apos;s briefing will appear here.
                                 </div>
                               </div>
                             </div>
                             <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
-                              Awaiting Assignment
+                              Concealed by Admin
                             </span>
                           </div>
                         )
                       )}
 
-                      {/* Round 2: Stock Market Trading Portal (ONLY POPS UP ONCE ADMIN RELEASES CREDENTIALS) */}
+                      {/* ASSIGNED DATASHEET (EXCEL/CSV - CONFIDENTIAL - ONLY VIEWABLE ONCE REVEALED BY ADMIN) */}
+                      {registration.status === 'approved' && (
+                        Boolean(hackathon?.datasheets_released) ? (
+                          registration.assigned_datasheet ? (
+                            <div className="bg-gradient-to-br from-[#071915] via-[#0A1F1B] to-[#081512] border-2 border-emerald-500/60 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(16,185,129,0.2)] space-y-4">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-emerald-900/50">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                                    <FileSpreadsheet className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-mono font-black text-white text-sm uppercase tracking-wider">
+                                        Assigned Financial & Operating Datasheet
+                                      </h4>
+                                      <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 text-[10px] font-mono font-black border border-emerald-700 uppercase">
+                                        Round 2 Intel
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] text-emerald-300/80 font-mono">
+                                      Confidential Dataset • Allocated exclusively to your squad
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-[10px] font-mono font-bold self-start sm:self-auto">
+                                  <ShieldCheck className="w-3 h-3 text-emerald-400" /> Team Specific
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                                  <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+                                  <span>{registration.assigned_datasheet.file_name}</span>
+                                </div>
+                                {registration.assigned_datasheet.notes && (
+                                  <p className="text-xs text-slate-300 leading-relaxed font-sans pt-1">
+                                    {registration.assigned_datasheet.notes}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="pt-2">
+                                <a
+                                  href={registration.assigned_datasheet.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download={registration.assigned_datasheet.file_name || 'Team_Datasheet.xlsx'}
+                                  className="inline-flex items-center gap-2 py-2.5 px-5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-mono font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] cursor-pointer"
+                                >
+                                  <Download className="w-4 h-4" /> Download Assigned Datasheet (.xlsx)
+                                </a>
+                              </div>
+
+                              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 font-mono flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                                <span>
+                                  <strong>Confidentiality Policy:</strong> This dataset is tailored to your case track. Sharing across teams will result in disqualification.
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                                </div>
+                                <div>
+                                  <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                                    Round 2: Operational & Financial Datasheets
+                                  </div>
+                                  <div className="text-[11px] text-slate-400 font-sans">
+                                    Your squad&apos;s specific dataset will be uploaded shortly by the evaluators.
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
+                                Awaiting Upload
+                              </span>
+                            </div>
+                          )
+                        ) : (
+                          <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                                <Lock className="w-4 h-4 text-emerald-400" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                                  Round 2: Financial & Operational Datasheets
+                                </div>
+                                <div className="text-[11px] text-slate-400 font-sans">
+                                  Financial spreadsheets and operating data will be unlocked and downloadable here once released by the admins.
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
+                              Concealed by Admin
+                            </span>
+                          </div>
+                        )
+                      )}
+
+                      {/* Round 3: Stock Market Trading Portal (ONLY POPS UP ONCE ADMIN RELEASES CREDENTIALS) */}
                       {(() => {
                         const isCredentialsUnlocked = Boolean(stockMarketState?.credentials_released || hackathon?.credentials_released);
                         const isApproved = String(registration?.status || '').toLowerCase().trim() === 'approved';
@@ -636,7 +774,7 @@ export default function ProfilePage() {
                                   </div>
                                   <div>
                                     <h4 className="font-mono font-black text-white text-sm uppercase tracking-wider">
-                                      ROUND 2: STOCK MARKET TRADING ACCESS
+                                      ROUND 3: STOCK MARKET TRADING ACCESS
                                     </h4>
                                     <span className="text-[11px] text-emerald-300 font-mono">
                                       {stockMarketState?.status === 'OPEN' 
@@ -732,7 +870,7 @@ export default function ProfilePage() {
                                 </div>
                                 <div>
                                   <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                                    Round 2: Stock Market Simulation
+                                    Round 3: Stock Market Simulation
                                   </div>
                                   <div className="text-[11px] text-slate-400 font-sans">
                                     Team login codes will be unlocked and displayed here once released by the market coordinators.

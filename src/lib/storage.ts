@@ -1,4 +1,4 @@
-import { TeamRegistration, Hackathon, AdminUser, UserProfile, RegistrationStatus, UserRole, TeamMember, ProblemStatement } from '@/types'
+import { TeamRegistration, Hackathon, AdminUser, UserProfile, RegistrationStatus, UserRole, TeamMember, ProblemStatement, TeamDatasheet } from '@/types'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 
@@ -70,18 +70,24 @@ export function getTeamTraderPin(reg: { id: string; utr_reference?: string | nul
 // Helper to parse market config out of hackathon
 function parseHackathon(data: any): Hackathon {
   let credentialsReleased = Boolean(data.credentials_released)
+  let psReleased = Boolean(data.ps_released)
+  let datasheetsReleased = Boolean(data.datasheets_released)
   if (data.upi_id && typeof data.upi_id === 'string' && data.upi_id.includes('MARKET_CONFIG:')) {
     try {
       const jsonStr = data.upi_id.substring(data.upi_id.indexOf('MARKET_CONFIG:') + 'MARKET_CONFIG:'.length)
       const parsed = JSON.parse(jsonStr)
-      if (parsed && parsed.credentials_released !== undefined) {
-        credentialsReleased = Boolean(parsed.credentials_released)
+      if (parsed) {
+        if (parsed.credentials_released !== undefined) credentialsReleased = Boolean(parsed.credentials_released)
+        if (parsed.ps_released !== undefined) psReleased = Boolean(parsed.ps_released)
+        if (parsed.datasheets_released !== undefined) datasheetsReleased = Boolean(parsed.datasheets_released)
       }
     } catch (_) {}
   }
   return {
     ...data,
-    credentials_released: credentialsReleased
+    credentials_released: credentialsReleased,
+    ps_released: psReleased,
+    datasheets_released: datasheetsReleased
   } as Hackathon
 }
 
@@ -163,9 +169,37 @@ export const LocalDB = {
     return active ? parseHackathon(active) : null
   },
 
-  async setCredentialsReleased(hackathonId: string, released: boolean): Promise<boolean> {
-    const configStr = `MARKET_CONFIG:${JSON.stringify({ credentials_released: Boolean(released) })}`
+  async updateMarketConfig(
+    hackathonId: string,
+    updates: { credentials_released?: boolean; ps_released?: boolean; datasheets_released?: boolean }
+  ): Promise<boolean> {
     const supabase = getSupabase()
+    let currentConfig: Record<string, boolean> = {}
+
+    // First retrieve current config so we merge and do not overwrite
+    if (supabase) {
+      try {
+        const { data } = await supabase.from('hackathons').select('upi_id').eq('id', hackathonId).maybeSingle()
+        if (data && data.upi_id && typeof data.upi_id === 'string' && data.upi_id.includes('MARKET_CONFIG:')) {
+          try {
+            const jsonStr = data.upi_id.substring(data.upi_id.indexOf('MARKET_CONFIG:') + 'MARKET_CONFIG:'.length)
+            currentConfig = JSON.parse(jsonStr) || {}
+          } catch (_) {}
+        }
+      } catch (_) {}
+    } else {
+      const currentHack = this.getHackathons().find(h => h.id === hackathonId)
+      if (currentHack && currentHack.upi_id && currentHack.upi_id.includes('MARKET_CONFIG:')) {
+        try {
+          const jsonStr = currentHack.upi_id.substring(currentHack.upi_id.indexOf('MARKET_CONFIG:') + 'MARKET_CONFIG:'.length)
+          currentConfig = JSON.parse(jsonStr) || {}
+        } catch (_) {}
+      }
+    }
+
+    const merged = { ...currentConfig, ...updates }
+    const configStr = `MARKET_CONFIG:${JSON.stringify(merged)}`
+
     if (supabase) {
       try {
         const { error } = await supabase
@@ -177,16 +211,42 @@ export const LocalDB = {
           const idx = hackathons.findIndex(h => h.id === hackathonId)
           if (idx !== -1) {
             hackathons[idx].upi_id = configStr
-            hackathons[idx].credentials_released = Boolean(released)
+            if (merged.credentials_released !== undefined) hackathons[idx].credentials_released = Boolean(merged.credentials_released)
+            if (merged.ps_released !== undefined) hackathons[idx].ps_released = Boolean(merged.ps_released)
+            if (merged.datasheets_released !== undefined) hackathons[idx].datasheets_released = Boolean(merged.datasheets_released)
             this.saveHackathons(hackathons)
           }
           return true
         }
       } catch (err) {
-        console.error('Supabase setCredentialsReleased exception:', err)
+        console.error('Supabase updateMarketConfig exception:', err)
       }
     }
+
+    // Local fallback
+    const hackathons = this.getHackathons()
+    const idx = hackathons.findIndex(h => h.id === hackathonId)
+    if (idx !== -1) {
+      hackathons[idx].upi_id = configStr
+      if (merged.credentials_released !== undefined) hackathons[idx].credentials_released = Boolean(merged.credentials_released)
+      if (merged.ps_released !== undefined) hackathons[idx].ps_released = Boolean(merged.ps_released)
+      if (merged.datasheets_released !== undefined) hackathons[idx].datasheets_released = Boolean(merged.datasheets_released)
+      this.saveHackathons(hackathons)
+      return true
+    }
     return false
+  },
+
+  async setCredentialsReleased(hackathonId: string, released: boolean): Promise<boolean> {
+    return this.updateMarketConfig(hackathonId, { credentials_released: Boolean(released) })
+  },
+
+  async setPSReleased(hackathonId: string, released: boolean): Promise<boolean> {
+    return this.updateMarketConfig(hackathonId, { ps_released: Boolean(released) })
+  },
+
+  async setDatasheetsReleased(hackathonId: string, released: boolean): Promise<boolean> {
+    return this.updateMarketConfig(hackathonId, { datasheets_released: Boolean(released) })
   },
 
   async addHackathon(hackathon: Omit<Hackathon, 'id' | 'created_at'>): Promise<Hackathon> {
@@ -823,6 +883,88 @@ export const LocalDB = {
         }
       } catch (err) {
         console.error('Supabase updateTeamProblemStatement exception:', err)
+      }
+    }
+
+    return all[index]
+  },
+
+  async updateTeamDatasheet(
+    id: string,
+    datasheet: TeamDatasheet | null
+  ): Promise<TeamRegistration | null> {
+    const all = this.getRegistrations()
+    const index = all.findIndex(r => r.id === id)
+    const now = new Date().toISOString()
+
+    if (index === -1) return null
+    const existing = all[index]
+
+    const updatedMembers = existing.members ? [...existing.members] : []
+    if (updatedMembers.length > 0) {
+      if (datasheet) {
+        updatedMembers[0] = {
+          ...updatedMembers[0],
+          assigned_datasheet: {
+            ...datasheet,
+            assigned_at: datasheet.assigned_at || now
+          }
+        }
+      } else {
+        const copy = { ...updatedMembers[0] }
+        delete (copy as any).assigned_datasheet
+        updatedMembers[0] = copy
+      }
+    }
+
+    all[index] = {
+      ...existing,
+      members: updatedMembers,
+      assigned_datasheet: datasheet || undefined,
+      updated_at: now
+    }
+    this.saveRegistrations(all)
+
+    // 1. Server API route
+    if (isBrowser()) {
+      try {
+        const res = await fetch('/api/registrations', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id,
+            members: updatedMembers
+          })
+        })
+        if (res.ok) {
+          const json = await res.json()
+          if (json.success && json.registration) {
+            return json.registration
+          }
+        }
+      } catch (apiErr) {
+        console.warn('[LocalDB] /api/registrations PATCH datasheet failed, trying Supabase direct:', apiErr)
+      }
+    }
+
+    // 2. Direct Supabase fallback
+    const supabase = getSupabase()
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('team_registrations')
+          .update({
+            members: updatedMembers,
+            updated_at: now
+          })
+          .eq('id', id)
+          .select()
+
+        if (!error && data && data[0]) {
+          return parseRegistration(data[0])
+        }
+      } catch (err) {
+        console.error('Supabase updateTeamDatasheet exception:', err)
       }
     }
 
@@ -1808,6 +1950,7 @@ export const LocalDB = {
 function parseRegistration(raw: any): TeamRegistration {
   const members = Array.isArray(raw.members) ? raw.members : (typeof raw.members === 'string' ? JSON.parse(raw.members) : [])
   const assigned_problem_statement = raw.assigned_problem_statement || (members[0] && members[0].assigned_problem_statement) || undefined
+  const assigned_datasheet = raw.assigned_datasheet || (members[0] && members[0].assigned_datasheet) || undefined
 
   return {
     ...raw,
@@ -1817,6 +1960,7 @@ function parseRegistration(raw: any): TeamRegistration {
     round_3_score: Number(raw.round_3_score) || 0,
     judge_notes: raw.judge_notes || undefined,
     assigned_problem_statement,
+    assigned_datasheet,
     members
   }
 }

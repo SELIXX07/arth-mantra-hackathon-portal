@@ -8,13 +8,13 @@ import {
   Sparkles, Plus, Trash2, Edit3, Calendar, Check, Filter,
   FileSpreadsheet, ExternalLink, Copy, Upload, Image as ImageIcon,
   ShieldCheck, DollarSign, Terminal, ChevronDown, ChevronUp, Link as LinkIcon,
-  Trophy, Award, TrendingUp, Star, KeyRound, Activity, Play, Pause, Square, Database, BookOpen
+  Trophy, Award, TrendingUp, Star, KeyRound, Activity, Play, Pause, Square, Database, BookOpen, FileText, Layers
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
 import { LocalDB, getTeamTraderPin, exportRegistrationsToExcel, exportLeaderboardToExcel, exportFilteredMembersToExcel, exportProfilesToExcel, PRESET_ARTH_MANTRA } from '@/lib/storage'
 import { STOCK_MARKET_URL } from '@/lib/config'
-import { TeamRegistration, AdminUser, Hackathon, UserRole, UserProfile, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ProblemStatement } from '@/types'
+import { TeamRegistration, AdminUser, Hackathon, UserRole, UserProfile, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ProblemStatement, TeamDatasheet } from '@/types'
 import Link from 'next/link'
 
 export const ARTH_MANTRA_PS_PRESETS: ProblemStatement[] = [
@@ -169,6 +169,40 @@ export default function AdminDashboardPage() {
     }
   }
 
+  const handleTogglePSRelease = async (released: boolean) => {
+    try {
+      const active = hackathonsList.find(h => h.is_active) || (await LocalDB.getActiveHackathon())
+      if (!active) {
+        showToast('No active hackathon found to update.', 'warning')
+        return
+      }
+      await LocalDB.setPSReleased(active.id, released)
+      setHackathonsList(prev => prev.map(h => h.id === active.id ? { ...h, ps_released: released } : h))
+      const msg = released ? 'All Problem Statements revealed to approved teams!' : 'Problem Statements are now concealed from teams.'
+      showToast(msg, released ? 'success' : 'info')
+      await loadData(true)
+    } catch (err: any) {
+      showToast('Failed to toggle problem statements: ' + err.message, 'error')
+    }
+  }
+
+  const handleToggleDatasheetRelease = async (released: boolean) => {
+    try {
+      const active = hackathonsList.find(h => h.is_active) || (await LocalDB.getActiveHackathon())
+      if (!active) {
+        showToast('No active hackathon found to update.', 'warning')
+        return
+      }
+      await LocalDB.setDatasheetsReleased(active.id, released)
+      setHackathonsList(prev => prev.map(h => h.id === active.id ? { ...h, datasheets_released: released } : h))
+      const msg = released ? 'All Datasheets revealed to approved teams!' : 'Datasheets are now concealed from teams.'
+      showToast(msg, released ? 'success' : 'info')
+      await loadData(true)
+    } catch (err: any) {
+      showToast('Failed to toggle datasheets: ' + err.message, 'error')
+    }
+  }
+
   const handleSyncTeamsToStockMarket = async () => {
     try {
       const approved = registrations.filter(r => r.status === 'approved')
@@ -243,7 +277,18 @@ export default function AdminDashboardPage() {
   const [psDescription, setPsDescription] = useState('')
   const [psDeliverables, setPsDeliverables] = useState('')
   const [psResources, setPsResources] = useState('')
+  const [psPdfUrl, setPsPdfUrl] = useState('')
+  const [psPdfName, setPsPdfName] = useState('')
+  const [psPdfUploading, setPsPdfUploading] = useState(false)
   const [isSubmittingPS, setIsSubmittingPS] = useState(false)
+
+  // Datasheet Modal State
+  const [datasheetModalTeam, setDatasheetModalTeam] = useState<TeamRegistration | null>(null)
+  const [datasheetFileUrl, setDatasheetFileUrl] = useState('')
+  const [datasheetFileName, setDatasheetFileName] = useState('')
+  const [datasheetNotes, setDatasheetNotes] = useState('')
+  const [datasheetUploading, setDatasheetUploading] = useState(false)
+  const [isSubmittingDatasheet, setIsSubmittingDatasheet] = useState(false)
 
   // Hackathon Form State
   const [isEditingHackathon, setIsEditingHackathon] = useState(false)
@@ -362,6 +407,8 @@ export default function AdminDashboardPage() {
       }
       return (a.full_name || '').localeCompare(b.full_name || '')
     })
+
+  const activeHackathon = hackathonsList.find(h => h.is_active) || hackathonsList[0] || null
 
   // Scoped registrations
   const relevantRegistrations = selectedHackathonFilter === 'all'
@@ -555,6 +602,8 @@ export default function AdminDashboardPage() {
       setPsDescription(team.assigned_problem_statement.description || '')
       setPsDeliverables(team.assigned_problem_statement.deliverables || '')
       setPsResources(team.assigned_problem_statement.resources || '')
+      setPsPdfUrl(team.assigned_problem_statement.pdf_url || '')
+      setPsPdfName(team.assigned_problem_statement.pdf_name || '')
     } else {
       const preset = ARTH_MANTRA_PS_PRESETS[0]
       setPsTitle(preset.title)
@@ -562,6 +611,8 @@ export default function AdminDashboardPage() {
       setPsDescription(preset.description)
       setPsDeliverables(preset.deliverables || '')
       setPsResources(preset.resources || '')
+      setPsPdfUrl('')
+      setPsPdfName('')
     }
   }
 
@@ -573,6 +624,36 @@ export default function AdminDashboardPage() {
       setPsDescription(p.description)
       setPsDeliverables(p.deliverables || '')
       setPsResources(p.resources || '')
+    }
+  }
+
+  const handleUploadPSFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPsPdfUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      if (psPdfUrl) {
+        formData.append('oldUrl', psPdfUrl)
+      }
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await res.json()
+      if (data.url) {
+        setPsPdfUrl(data.url)
+        setPsPdfName(file.name)
+        showToast(`Uploaded PDF: ${file.name}`, 'success')
+      } else {
+        showToast(data.error || 'Failed to upload PDF', 'error')
+      }
+    } catch (err: any) {
+      showToast('Error uploading PDF: ' + err.message, 'error')
+    } finally {
+      setPsPdfUploading(false)
+      if (e.target) e.target.value = ''
     }
   }
 
@@ -592,6 +673,8 @@ export default function AdminDashboardPage() {
         description: psDescription.trim(),
         deliverables: psDeliverables.trim() || undefined,
         resources: psResources.trim() || undefined,
+        pdf_url: psPdfUrl.trim() || undefined,
+        pdf_name: psPdfName.trim() || undefined,
         assigned_at: new Date().toISOString()
       }
 
@@ -630,6 +713,105 @@ export default function AdminDashboardPage() {
       showToast('Failed to remove problem statement: ' + err.message, 'error')
     } finally {
       setIsSubmittingPS(false)
+    }
+  }
+
+  // Open Datasheet Modal
+  const handleOpenDatasheetModal = (team: TeamRegistration) => {
+    setDatasheetModalTeam(team)
+    if (team.assigned_datasheet) {
+      setDatasheetFileUrl(team.assigned_datasheet.file_url || '')
+      setDatasheetFileName(team.assigned_datasheet.file_name || '')
+      setDatasheetNotes(team.assigned_datasheet.notes || '')
+    } else {
+      setDatasheetFileUrl('')
+      setDatasheetFileName('')
+      setDatasheetNotes('')
+    }
+  }
+
+  const handleUploadDatasheetFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setDatasheetUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      if (datasheetFileUrl) {
+        formData.append('oldUrl', datasheetFileUrl)
+      }
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await res.json()
+      if (data.url) {
+        setDatasheetFileUrl(data.url)
+        setDatasheetFileName(file.name)
+        showToast(`Uploaded Datasheet: ${file.name}`, 'success')
+      } else {
+        showToast(data.error || 'Failed to upload spreadsheet', 'error')
+      }
+    } catch (err: any) {
+      showToast('Error uploading spreadsheet: ' + err.message, 'error')
+    } finally {
+      setDatasheetUploading(false)
+      if (e.target) e.target.value = ''
+    }
+  }
+
+  const handleSaveDatasheet = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!datasheetModalTeam) return
+    if (!datasheetFileUrl) {
+      showToast('Please upload an Excel / spreadsheet file first.', 'warning')
+      return
+    }
+
+    setIsSubmittingDatasheet(true)
+    try {
+      const sheetPayload: TeamDatasheet = {
+        file_url: datasheetFileUrl,
+        file_name: datasheetFileName || 'Team_Datasheet.xlsx',
+        notes: datasheetNotes.trim() || undefined,
+        assigned_at: new Date().toISOString()
+      }
+
+      const updated = await LocalDB.updateTeamDatasheet(datasheetModalTeam.id, sheetPayload)
+      if (updated) {
+        setRegistrations(prev =>
+          prev.map(r => r.id === datasheetModalTeam.id ? { ...r, assigned_datasheet: sheetPayload } : r)
+        )
+      }
+      showToast(`Datasheet assigned to "${datasheetModalTeam.team_name}"!`, 'success')
+      setDatasheetModalTeam(null)
+      await loadData(true)
+    } catch (err: any) {
+      showToast('Failed to save datasheet: ' + (err.message || 'Unknown error'), 'error')
+    } finally {
+      setIsSubmittingDatasheet(false)
+    }
+  }
+
+  const handleRemoveDatasheet = async () => {
+    if (!datasheetModalTeam) return
+    if (!confirm(`Are you sure you want to remove the assigned datasheet from "${datasheetModalTeam.team_name}"?`)) {
+      return
+    }
+
+    setIsSubmittingDatasheet(true)
+    try {
+      await LocalDB.updateTeamDatasheet(datasheetModalTeam.id, null)
+      setRegistrations(prev =>
+        prev.map(r => r.id === datasheetModalTeam.id ? { ...r, assigned_datasheet: undefined } : r)
+      )
+      showToast(`Datasheet removed from "${datasheetModalTeam.team_name}".`, 'info')
+      setDatasheetModalTeam(null)
+      await loadData(true)
+    } catch (err: any) {
+      showToast('Failed to remove datasheet: ' + err.message, 'error')
+    } finally {
+      setIsSubmittingDatasheet(false)
     }
   }
 
@@ -1200,73 +1382,186 @@ export default function AdminDashboardPage() {
         {/* ── TAB 1: REGISTRATIONS & APPROVALS ──────────────────────── */}
         {activeTab === 'registrations' && (
           <div className="space-y-6">
-            {/* Round 2: Stock Market Credentials Release Banner on Main Registration Page */}
-            <div className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl ${
-              stockMarketState?.credentials_released
-                ? 'bg-gradient-to-r from-emerald-950/90 via-[#091E1C] to-[#0A1220] border-emerald-500/80 shadow-[0_0_25px_rgba(16,185,129,0.25)]'
-                : 'bg-gradient-to-r from-[#0C1427] via-[#0E1726] to-[#0A1220] border-slate-700 shadow-md'
-            }`}>
-              <div className="flex items-center gap-3.5">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
-                  stockMarketState?.credentials_released
-                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                    : 'bg-slate-800/80 border-slate-700 text-slate-400'
-                }`}>
-                  {stockMarketState?.credentials_released ? (
-                    <Eye className="w-6 h-6 text-emerald-400 animate-pulse" />
-                  ) : (
-                    <EyeOff className="w-6 h-6 text-slate-400" />
-                  )}
-                </div>
+            {/* ── ROUND RELEASE & REVEAL CONTROL CENTER ── */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
                 <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-mono font-black text-white text-sm sm:text-base uppercase tracking-wider">
-                      Stock Market Trading Credentials
-                    </h3>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black border uppercase ${
-                      stockMarketState?.credentials_released
-                        ? 'bg-emerald-950 text-emerald-400 border-emerald-600 animate-pulse'
-                        : 'bg-rose-950 text-rose-400 border-rose-800'
-                    }`}>
-                      {stockMarketState?.credentials_released ? '● Revealed to Teams' : '○ Hidden from Teams'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-300 mt-1">
-                    {stockMarketState?.credentials_released
-                      ? 'Approved teams can view their Team Codes, Trader PINs, and 1-click Trading Link on their profile.'
-                      : 'Credentials are currently concealed from teams. Click Reveal when ready for teams to prepare their login.'}
+                  <h3 className="text-sm font-mono font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-cyan-400" /> Round Materials & Team Visibility Controls
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Control which round assets and credentials are released to approved teams on their profiles. All toggles are instantly reversible.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => handleToggleCredentials(!Boolean(stockMarketState?.credentials_released))}
-                  className={`py-2.5 px-5 rounded-xl font-mono font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-lg ${
-                    stockMarketState?.credentials_released
-                      ? 'bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-700 hover:shadow-rose-900/30'
-                      : 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-emerald-900/40'
-                  }`}
-                >
-                  {stockMarketState?.credentials_released ? (
-                    <>
-                      <EyeOff className="w-4 h-4" /> Hide Credentials from Teams
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="w-4 h-4" /> Reveal Credentials to Teams
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSyncTeamsToStockMarket}
-                  title="Force re-sync all approved teams to stock market"
-                  className="py-2.5 px-3.5 rounded-xl font-mono font-bold text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Sync Teams
-                </button>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                {/* 1. Problem Statements Release Card */}
+                <div className={`p-4 rounded-2xl border transition-all flex flex-col justify-between shadow-lg ${
+                  activeHackathon?.ps_released
+                    ? 'bg-gradient-to-br from-indigo-950/90 via-[#0B132B] to-[#0A1020] border-indigo-500/80 shadow-[0_0_20px_rgba(99,102,241,0.2)]'
+                    : 'bg-gradient-to-br from-[#0C1427] to-[#0A1220] border-slate-800'
+                }`}>
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
+                          activeHackathon?.ps_released ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' : 'bg-slate-800 border-slate-700 text-slate-400'
+                        }`}>
+                          <BookOpen className="w-4 h-4" />
+                        </div>
+                        <span className="font-mono font-black text-white text-xs uppercase tracking-wider">
+                          Round 1: Problem Statements
+                        </span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-black border uppercase ${
+                        activeHackathon?.ps_released ? 'bg-indigo-950 text-indigo-300 border-indigo-600' : 'bg-slate-900 text-slate-400 border-slate-700'
+                      }`}>
+                        {activeHackathon?.ps_released ? '● Revealed' : '○ Hidden'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-snug">
+                      {activeHackathon?.ps_released
+                        ? 'Approved teams can view their assigned briefing & download their uploaded PDF on their profile.'
+                        : 'Problem statements are concealed from teams. Clicking "Assign PS" only pre-assigns the brief without revealing it.'}
+                    </p>
+                  </div>
+                  <div className="pt-3 mt-3 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePSRelease(!Boolean(activeHackathon?.ps_released))}
+                      className={`w-full py-2 px-3 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        activeHackathon?.ps_released
+                          ? 'bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-800 hover:shadow-rose-900/30'
+                          : 'bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white shadow-indigo-900/40'
+                      }`}
+                    >
+                      {activeHackathon?.ps_released ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5" /> Hide PS from Teams
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5" /> Reveal All PS to Teams
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Datasheets Release Card */}
+                <div className={`p-4 rounded-2xl border transition-all flex flex-col justify-between shadow-lg ${
+                  activeHackathon?.datasheets_released
+                    ? 'bg-gradient-to-br from-emerald-950/90 via-[#071915] to-[#0A1220] border-emerald-500/80 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
+                    : 'bg-gradient-to-br from-[#0C1427] to-[#0A1220] border-slate-800'
+                }`}>
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
+                          activeHackathon?.datasheets_released ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-400'
+                        }`}>
+                          <FileSpreadsheet className="w-4 h-4" />
+                        </div>
+                        <span className="font-mono font-black text-white text-xs uppercase tracking-wider">
+                          Round 2: Team Datasheets
+                        </span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-black border uppercase ${
+                        activeHackathon?.datasheets_released ? 'bg-emerald-950 text-emerald-300 border-emerald-600' : 'bg-slate-900 text-slate-400 border-slate-700'
+                      }`}>
+                        {activeHackathon?.datasheets_released ? '● Revealed' : '○ Hidden'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-snug">
+                      {activeHackathon?.datasheets_released
+                        ? 'Approved teams can view and download their assigned Excel spreadsheet (.xlsx) on their profile.'
+                        : 'Datasheets are concealed. Clicking "Assign Datasheet" uploads & assigns the file without revealing it.'}
+                    </p>
+                  </div>
+                  <div className="pt-3 mt-3 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleDatasheetRelease(!Boolean(activeHackathon?.datasheets_released))}
+                      className={`w-full py-2 px-3 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        activeHackathon?.datasheets_released
+                          ? 'bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-800 hover:shadow-rose-900/30'
+                          : 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-emerald-900/40'
+                      }`}
+                    >
+                      {activeHackathon?.datasheets_released ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5" /> Hide Datasheets
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5" /> Reveal All Datasheets
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Round 3 Stock Market Credentials Release Card */}
+                <div className={`p-4 rounded-2xl border transition-all flex flex-col justify-between shadow-lg ${
+                  stockMarketState?.credentials_released
+                    ? 'bg-gradient-to-br from-cyan-950/90 via-[#071924] to-[#0A1220] border-cyan-500/80 shadow-[0_0_20px_rgba(6,182,212,0.2)]'
+                    : 'bg-gradient-to-br from-[#0C1427] to-[#0A1220] border-slate-800'
+                }`}>
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
+                          stockMarketState?.credentials_released ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' : 'bg-slate-800 border-slate-700 text-slate-400'
+                        }`}>
+                          <Activity className="w-4 h-4" />
+                        </div>
+                        <span className="font-mono font-black text-white text-xs uppercase tracking-wider">
+                          Round 3: Stock Market Access
+                        </span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-black border uppercase ${
+                        stockMarketState?.credentials_released ? 'bg-cyan-950 text-cyan-300 border-cyan-600' : 'bg-slate-900 text-slate-400 border-slate-700'
+                      }`}>
+                        {stockMarketState?.credentials_released ? '● Revealed' : '○ Hidden'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-snug">
+                      {stockMarketState?.credentials_released
+                        ? 'Approved teams can view Team Codes, Trader PINs & 1-click Trading Link on their profile.'
+                        : 'Trading credentials concealed from teams. Click Reveal when ready for teams to prepare terminal login.'}
+                    </p>
+                  </div>
+                  <div className="pt-3 mt-3 border-t border-slate-800/80 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleCredentials(!Boolean(stockMarketState?.credentials_released))}
+                      className={`flex-1 py-2 px-2.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        stockMarketState?.credentials_released
+                          ? 'bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-800 hover:shadow-rose-900/30'
+                          : 'bg-gradient-to-r from-cyan-600 to-blue-500 hover:from-cyan-500 hover:to-blue-400 text-white shadow-cyan-900/40'
+                      }`}
+                    >
+                      {stockMarketState?.credentials_released ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5" /> Hide Creds
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5" /> Reveal Creds
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSyncTeamsToStockMarket}
+                      title="Force re-sync all approved teams to stock market"
+                      className="py-2 px-2.5 rounded-xl font-mono font-bold text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Sync
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             {/* Stats Bar */}
@@ -1544,6 +1839,22 @@ export default function AdminDashboardPage() {
                             >
                               <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
                               <span>{reg.assigned_problem_statement ? 'Edit PS' : 'Assign PS'}</span>
+                            </button>
+                          )}
+
+                          {/* Datasheet Button (if approved) */}
+                          {reg.status === 'approved' && (
+                            <button
+                              onClick={() => handleOpenDatasheetModal(reg)}
+                              className={`py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                reg.assigned_datasheet
+                                  ? 'border-emerald-500/80 bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900/60 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                                  : 'border-slate-700 bg-slate-900/80 text-slate-400 hover:text-white hover:border-slate-600'
+                              }`}
+                              title={reg.assigned_datasheet ? `Datasheet: ${reg.assigned_datasheet.file_name}` : 'Assign an Excel Datasheet to this team'}
+                            >
+                              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>{reg.assigned_datasheet ? 'Edit Datasheet' : 'Assign Datasheet'}</span>
                             </button>
                           )}
 
@@ -3329,9 +3640,63 @@ export default function AdminDashboardPage() {
                     />
                   </div>
 
+                  {/* Upload PDF Section */}
+                  <div className="bg-[#080E1C] p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                    <label className="text-xs font-mono font-bold text-slate-300 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-indigo-400" /> Upload Problem Statement PDF (Recommended)
+                      </span>
+                      {psPdfUploading && <span className="text-indigo-400 text-[10px] animate-pulse">Uploading PDF...</span>}
+                    </label>
+
+                    {psPdfUrl ? (
+                      <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-700/60 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 truncate">
+                          <FileText className="w-4 h-4 text-indigo-400 shrink-0" />
+                          <span className="text-xs font-mono text-indigo-200 truncate">{psPdfName || 'Problem_Statement.pdf'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <a
+                            href={psPdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 rounded-lg text-cyan-400 hover:text-cyan-300 text-xs font-mono hover:underline flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> View
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => { setPsPdfUrl(''); setPsPdfName(''); }}
+                            className="p-1 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-950/60 cursor-pointer"
+                            title="Remove PDF"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center p-4 border border-dashed border-slate-700 hover:border-indigo-500 rounded-xl bg-slate-900/40 cursor-pointer transition-colors group">
+                        <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 mb-1 transition-colors" />
+                        <span className="text-xs font-mono text-slate-300 group-hover:text-white">
+                          Click to browse and upload Problem Statement PDF (.pdf)
+                        </span>
+                        <span className="text-[10px] text-slate-500 mt-0.5">
+                          PDF will be assigned exclusively to this team & downloadable once revealed
+                        </span>
+                        <input
+                          type="file"
+                          accept=".pdf,application/pdf"
+                          onChange={handleUploadPSFile}
+                          disabled={psPdfUploading}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+
                   <div>
                     <label className="font-bold text-slate-300 block mb-1 text-xs font-mono">
-                      Resource Link / Drive / PDF URL (Optional)
+                      Resource Link / Drive / Reference Material URL (Optional)
                     </label>
                     <input
                       type="url"
@@ -3340,6 +3705,13 @@ export default function AdminDashboardPage() {
                       placeholder="https://pes.edu/arth-mantra/resources/ps-track-1.pdf"
                       className="w-full p-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-white focus:outline-none focus:border-indigo-400 text-xs font-mono"
                     />
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-800/60 text-[11px] text-indigo-300 font-mono flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
+                    <span>
+                      <strong>Concealed by Default:</strong> Assigning saves this problem statement for {psModalTeam.team_name}. It will only become visible to them once &quot;Reveal All PS&quot; is activated.
+                    </span>
                   </div>
 
                   <div className="pt-3 flex items-center justify-between border-t border-slate-800">
@@ -3367,7 +3739,159 @@ export default function AdminDashboardPage() {
                         disabled={isSubmittingPS}
                         className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(99,102,241,0.3)] cursor-pointer disabled:opacity-50"
                       >
-                        {isSubmittingPS ? 'Saving...' : 'Assign & Lock to Team'}
+                        {isSubmittingPS ? 'Saving...' : 'Assign PS to Team'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* ── MODAL: ASSIGN DATASHEET TO TEAM (EXCEL) ────────────────── */}
+        <AnimatePresence>
+          {datasheetModalTeam && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-[#0C1427] max-w-xl w-full rounded-3xl p-5 sm:p-7 border border-emerald-500/50 shadow-[0_0_40px_rgba(16,185,129,0.25)] relative my-8"
+              >
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center">
+                      <FileSpreadsheet className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-black uppercase text-white block">
+                        Assign Datasheet: {datasheetModalTeam.team_name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        Round 2 Intel • Upload Excel (.xlsx, .xls, .csv) for this squad
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setDatasheetModalTeam(null)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveDatasheet} className="space-y-4">
+                  {/* Upload Excel Section */}
+                  <div className="bg-[#080E1C] p-4 rounded-2xl border border-slate-800 space-y-2.5">
+                    <label className="text-xs font-mono font-bold text-slate-300 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-400" /> Excel Spreadsheet File (.xlsx, .xls, .csv) *
+                      </span>
+                      {datasheetUploading && <span className="text-emerald-400 text-[10px] animate-pulse">Uploading Excel...</span>}
+                    </label>
+
+                    {datasheetFileUrl ? (
+                      <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-700/60 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 truncate">
+                          <FileSpreadsheet className="w-5 h-5 text-emerald-400 shrink-0" />
+                          <div className="truncate">
+                            <span className="text-xs font-mono font-bold text-emerald-200 block truncate">
+                              {datasheetFileName || 'Team_Datasheet.xlsx'}
+                            </span>
+                            <span className="text-[10px] text-emerald-400/80 font-mono">
+                              File ready for team assignment
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <a
+                            href={datasheetFileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-1 px-2.5 rounded-lg bg-emerald-900/60 text-emerald-300 hover:text-white text-xs font-mono hover:bg-emerald-800/60 flex items-center gap-1 transition-all"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Preview
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => { setDatasheetFileUrl(''); setDatasheetFileName(''); }}
+                            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-950/60 transition-all cursor-pointer"
+                            title="Replace / Remove File"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-2xl bg-slate-900/40 cursor-pointer transition-colors group">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform mb-2">
+                          <Upload className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-mono font-bold text-slate-200 group-hover:text-white">
+                          Click to select and upload team Excel datasheet
+                        </span>
+                        <span className="text-[10px] text-slate-400 mt-1">
+                          Supported formats: .xlsx, .xls, .csv
+                        </span>
+                        <input
+                          type="file"
+                          accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                          onChange={handleUploadDatasheetFile}
+                          disabled={datasheetUploading}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Notes / Description */}
+                  <div>
+                    <label className="font-bold text-slate-300 block mb-1 text-xs font-mono">
+                      Dataset Title or Operating Notes (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={datasheetNotes}
+                      onChange={e => setDatasheetNotes(e.target.value)}
+                      placeholder="e.g. Q4 Audited Balance Sheets, EBITDA Schedules & Cap Table"
+                      className="w-full p-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-white focus:outline-none focus:border-emerald-400 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-[11px] text-emerald-300 font-mono flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>
+                      <strong>Concealed by Default:</strong> Assigning saves this spreadsheet for {datasheetModalTeam.team_name}. The team can only download it once &quot;Reveal All Datasheets&quot; is activated.
+                    </span>
+                  </div>
+
+                  <div className="pt-3 flex items-center justify-between border-t border-slate-800">
+                    {datasheetModalTeam.assigned_datasheet ? (
+                      <button
+                        type="button"
+                        onClick={handleRemoveDatasheet}
+                        disabled={isSubmittingDatasheet}
+                        className="py-2.5 px-4 rounded-xl border border-rose-900/80 bg-rose-950/40 text-rose-300 text-xs font-bold hover:bg-rose-900/60 cursor-pointer transition-all"
+                      >
+                        Remove Datasheet
+                      </button>
+                    ) : <div />}
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDatasheetModalTeam(null)}
+                        className="py-2.5 px-4 rounded-xl border border-slate-700 text-xs font-bold text-slate-400 hover:text-white cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmittingDatasheet || !datasheetFileUrl}
+                        className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer disabled:opacity-50"
+                      >
+                        {isSubmittingDatasheet ? 'Saving...' : 'Assign Datasheet to Team'}
                       </button>
                     </div>
                   </div>

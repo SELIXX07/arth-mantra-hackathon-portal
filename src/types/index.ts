@@ -64,6 +64,14 @@ export interface TeamMember {
   section?: string;
   residence_type?: string;
   assigned_problem_statement?: ProblemStatement;
+  assigned_datasheet?: TeamDatasheet;
+}
+
+export interface TeamDatasheet {
+  file_url: string;
+  file_name: string;
+  assigned_at: string;
+  notes?: string;
 }
 
 export interface Hackathon {
@@ -80,6 +88,8 @@ export interface Hackathon {
   is_active: boolean;
   show_registered_teams?: boolean;
   credentials_released?: boolean;
+  ps_released?: boolean;
+  datasheets_released?: boolean;
   created_by: string;
   created_at: string;
 }
@@ -118,6 +128,7 @@ export interface TeamRegistration {
 
   judge_notes?: string;
   assigned_problem_statement?: ProblemStatement;
+  assigned_datasheet?: TeamDatasheet;
   created_at: string;
   updated_at: string;
 }
@@ -129,6 +140,8 @@ export interface ProblemStatement {
   resources?: string;
   deliverables?: string;
   assigned_at?: string;
+  pdf_url?: string;
+  pdf_name?: string;
 }
 
 export interface AdminUser {

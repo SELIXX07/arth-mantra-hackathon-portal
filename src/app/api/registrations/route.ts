@@ -115,6 +115,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    cache = {}
+
     return NextResponse.json({ success: true, message: `Registration ${id} deleted` })
   } catch (err: any) {
     console.error('[API /api/registrations DELETE exception]:', err)
@@ -193,6 +195,8 @@ export async function PATCH(req: NextRequest) {
       console.error('[API /api/registrations PATCH error]:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    cache = {}
 
     return NextResponse.json({ success: true, registration: parseRow(data) })
   } catch (err: any) {

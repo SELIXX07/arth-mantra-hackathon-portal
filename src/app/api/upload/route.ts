@@ -48,14 +48,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const fileExt = file.name.split('.').pop() || 'png'
-    const fileName = `screenshot-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`
+    const fileExt = file.name.split('.').pop() || 'bin'
+    const fileName = `upload-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`
     const buffer = Buffer.from(await file.arrayBuffer())
 
     const { data, error } = await supabase.storage
       .from('payment-screenshots')
       .upload(fileName, buffer, {
-        contentType: file.type || 'image/jpeg',
+        contentType: file.type || 'application/octet-stream',
         upsert: true
       })
 
