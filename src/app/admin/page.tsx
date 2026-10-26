@@ -8,7 +8,8 @@ import {
   Sparkles, Plus, Trash2, Edit3, Calendar, Check, Filter,
   FileSpreadsheet, ExternalLink, Copy, Upload, Image as ImageIcon,
   ShieldCheck, DollarSign, Terminal, ChevronDown, ChevronUp, Link as LinkIcon,
-  Trophy, Award, TrendingUp, Star, KeyRound, Activity, Play, Pause, Square, Database, BookOpen, FileText, Layers
+  Trophy, Award, TrendingUp, Star, KeyRound, Activity, Play, Pause, Square, Database, BookOpen, FileText, Layers,
+  UserCheck, Mail, Phone, GraduationCap, Building2
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
@@ -64,8 +65,18 @@ export default function AdminDashboardPage() {
     (user && (user.role === 'superadmin' || user.email?.toLowerCase() === 'artharambachalil@gmail.com'))
   )
 
-  const [activeTab, setActiveTab] = useState<'registrations' | 'scores' | 'stock_market' | 'hackathons' | 'admins'>('registrations')
+  const [activeTab, setActiveTab] = useState<'registrations' | 'members' | 'scores' | 'stock_market' | 'hackathons' | 'admins'>('registrations')
   const [registrations, setRegistrations] = useState<TeamRegistration[]>([])
+
+  // Dedicated Members Tab Filter & Sort States
+  const [memberSearchQuery, setMemberSearchQuery] = useState('')
+  const [memberStatusFilter, setMemberStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all')
+  const [memberRoleFilter, setMemberRoleFilter] = useState<'all' | 'leader' | 'member'>('all')
+  const [memberResidenceFilter, setMemberResidenceFilter] = useState<string>('all')
+  const [memberDeptFilter, setMemberDeptFilter] = useState<string>('all')
+  const [memberSemFilter, setMemberSemFilter] = useState<string>('all')
+  const [memberSecFilter, setMemberSecFilter] = useState<string>('all')
+  const [memberSortBy, setMemberSortBy] = useState<'name_asc' | 'team_asc' | 'srn_asc' | 'date_desc'>('name_asc')
   const [adminsList, setAdminsList] = useState<AdminUser[]>([])
   const [hackathonsList, setHackathonsList] = useState<Hackathon[]>([])
   const [allProfiles, setAllProfiles] = useState<UserProfile[]>([])
@@ -476,6 +487,116 @@ export default function AdminDashboardPage() {
   // Approved teams ranked by score for the Score Tracker
   const rankedApprovedTeams = [...relevantRegistrations.filter(r => r.status === 'approved')]
     .sort((a, b) => (b.score || 0) - (a.score || 0))
+
+  // Flattened Members List across all relevant registrations
+  const allMembersList = React.useMemo(() => {
+    const list: Array<{
+      id: string;
+      team_id: string;
+      team_name: string;
+      leader_email: string;
+      member_role: string;
+      is_leader: boolean;
+      name: string;
+      srn: string;
+      phone: string;
+      email: string;
+      department?: string;
+      semester?: string;
+      section?: string;
+      residence_type?: string;
+      status: string;
+      registered_at: string;
+      hackathon_name: string;
+    }> = []
+
+    relevantRegistrations.forEach(reg => {
+      (reg.members || []).forEach((m, idx) => {
+        const isLeader = idx === 0 || m.email?.toLowerCase() === reg.leader_email?.toLowerCase()
+        list.push({
+          id: `${reg.id}-mem-${idx}`,
+          team_id: reg.id,
+          team_name: reg.team_name,
+          leader_email: reg.leader_email,
+          member_role: isLeader ? 'Team Leader' : 'Team Member',
+          is_leader: isLeader,
+          name: m.name || 'Unnamed',
+          srn: m.srn || 'N/A',
+          phone: m.phone || 'N/A',
+          email: m.email || 'N/A',
+          department: m.department || 'N/A',
+          semester: m.semester || 'N/A',
+          section: m.section || 'N/A',
+          residence_type: m.residence_type || 'Non-Hostelite',
+          status: reg.status,
+          registered_at: reg.created_at,
+          hackathon_name: reg.hackathon_name || 'Arth Mantra'
+        })
+      })
+    })
+
+    return list
+  }, [relevantRegistrations])
+
+  // Filtered & Sorted Members for the Dedicated Members Tab
+  const filteredMembers = React.useMemo(() => {
+    return allMembersList.filter(m => {
+      // 1. Text Search across name, srn, email, phone, team_name, department
+      if (memberSearchQuery.trim()) {
+        const q = memberSearchQuery.toLowerCase().trim()
+        const matches =
+          m.name.toLowerCase().includes(q) ||
+          m.srn.toLowerCase().includes(q) ||
+          m.email.toLowerCase().includes(q) ||
+          m.phone.toLowerCase().includes(q) ||
+          m.team_name.toLowerCase().includes(q) ||
+          (m.department && m.department.toLowerCase().includes(q))
+        if (!matches) return false
+      }
+
+      // 2. Status Filter
+      if (memberStatusFilter !== 'all' && m.status !== memberStatusFilter) return false
+
+      // 3. Role Filter
+      if (memberRoleFilter === 'leader' && !m.is_leader) return false
+      if (memberRoleFilter === 'member' && m.is_leader) return false
+
+      // 4. Residence Filter
+      if (memberResidenceFilter !== 'all') {
+        const target = memberResidenceFilter.toLowerCase()
+        const actual = (m.residence_type || 'non-hostelite').toLowerCase()
+        if (actual !== target) return false
+      }
+
+      // 5. Dept Filter
+      if (memberDeptFilter !== 'all' && m.department !== memberDeptFilter) return false
+
+      // 6. Sem Filter
+      if (memberSemFilter !== 'all' && String(m.semester) !== String(memberSemFilter)) return false
+
+      // 7. Sec Filter
+      if (memberSecFilter !== 'all' && String(m.section).toUpperCase() !== String(memberSecFilter).toUpperCase()) return false
+
+      return true
+    }).sort((a, b) => {
+      if (memberSortBy === 'name_asc') return a.name.localeCompare(b.name)
+      if (memberSortBy === 'team_asc') return a.team_name.localeCompare(b.team_name)
+      if (memberSortBy === 'srn_asc') return a.srn.localeCompare(b.srn)
+      if (memberSortBy === 'date_desc') return new Date(b.registered_at).getTime() - new Date(a.registered_at).getTime()
+      return 0
+    })
+  }, [allMembersList, memberSearchQuery, memberStatusFilter, memberRoleFilter, memberResidenceFilter, memberDeptFilter, memberSemFilter, memberSecFilter, memberSortBy])
+
+  const handleExportMembersTabExcel = () => {
+    if (filteredMembers.length === 0) {
+      showToast('No members found matching current filters.', 'warning')
+      return
+    }
+    const filterTag = memberStatusFilter !== 'all' ? `_${memberStatusFilter}` : ''
+    const residenceTag = memberResidenceFilter !== 'all' ? `_${memberResidenceFilter.toLowerCase()}` : ''
+    exportFilteredMembersToExcel(filteredMembers, `Arth_Mantra_Members${filterTag}${residenceTag}`)
+    showToast(`Successfully exported ${filteredMembers.length} members to Excel (.xlsx)!`, 'success')
+  }
 
   // Approval handler
   const handleApprove = async (reg: TeamRegistration) => {
@@ -1295,6 +1416,16 @@ export default function AdminDashboardPage() {
               <Users className="w-4 h-4" /> Team Approvals ({registrations.length})
             </button>
             <button
+              onClick={() => setActiveTab('members')}
+              className={`py-2 px-3.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'members'
+                  ? 'bg-gradient-to-r from-blue-600 via-cyan-500 to-teal-400 text-slate-950 font-black shadow-[0_0_15px_rgba(0,210,255,0.35)]'
+                  : 'bg-[#0C1222] border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+              }`}
+            >
+              <UserCheck className="w-4 h-4 text-cyan-400" /> Members Directory ({allMembersList.length})
+            </button>
+            <button
               onClick={() => setActiveTab('scores')}
               className={`py-2 px-3.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                 activeTab === 'scores'
@@ -2009,6 +2140,451 @@ export default function AdminDashboardPage() {
                     </motion.div>
                   )
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB: DEDICATED SQUAD MEMBERS DIRECTORY & EXCEL EXPORT ── */}
+        {activeTab === 'members' && (
+          <div className="space-y-6">
+            {/* Header & Quick Export Card */}
+            <div className="bg-[#0C1222] p-5 sm:p-7 rounded-3xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-teal-400" />
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-8 h-8 rounded-xl bg-cyan-950/80 border border-cyan-800 flex items-center justify-center text-[#00D2FF]">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    Individual Squad Members Directory
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+                  Browse and audit every registered member individually. Filter by department, semester, section, hostel status, or squad state, and export high-fidelity tabular spreadsheets to Excel.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5 flex-wrap self-start md:self-auto">
+                <button
+                  type="button"
+                  onClick={() => loadData(false)}
+                  className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer"
+                  title="Refresh Data"
+                >
+                  <RefreshCw className={`w-4 h-4 ${dataLoading ? 'animate-spin text-[#00D2FF]' : ''}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportMembersTabExcel}
+                  disabled={filteredMembers.length === 0}
+                  className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] cursor-pointer disabled:opacity-40"
+                  title="Export currently filtered members to an Excel spreadsheet (.xlsx)"
+                >
+                  <Download className="w-4 h-4" /> Export Members (.xlsx)
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="bg-[#0C1222] p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Members</span>
+                <span className="text-xl font-mono font-black text-white mt-1">{allMembersList.length}</span>
+              </div>
+              <div className="bg-[#0C1222] p-3.5 rounded-2xl border border-emerald-900/50 flex flex-col justify-between">
+                <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Approved Squads</span>
+                <span className="text-xl font-mono font-black text-emerald-300 mt-1">
+                  {allMembersList.filter(m => m.status === 'approved').length}
+                </span>
+              </div>
+              <div className="bg-[#0C1222] p-3.5 rounded-2xl border border-amber-900/50 flex flex-col justify-between">
+                <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">Under Review</span>
+                <span className="text-xl font-mono font-black text-amber-300 mt-1">
+                  {allMembersList.filter(m => m.status === 'pending').length}
+                </span>
+              </div>
+              <div className="bg-[#0C1222] p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <span className="text-[10px] uppercase font-bold text-amber-300 tracking-wider">Hostelites</span>
+                <span className="text-xl font-mono font-black text-amber-200 mt-1">
+                  {allMembersList.filter(m => (m.residence_type || '').toLowerCase() === 'hostelite').length}
+                </span>
+              </div>
+              <div className="bg-[#0C1222] p-3.5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <span className="text-[10px] uppercase font-bold text-cyan-300 tracking-wider">Non-Hostelites</span>
+                <span className="text-xl font-mono font-black text-cyan-200 mt-1">
+                  {allMembersList.filter(m => (m.residence_type || '').toLowerCase() !== 'hostelite').length}
+                </span>
+              </div>
+            </div>
+
+            {/* Filter & Search Control Panel */}
+            <div className="bg-[#0C1222] p-4 sm:p-5 rounded-3xl border border-slate-800 space-y-3.5 shadow-xl">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs font-mono font-black text-white uppercase tracking-wider">Filter Member Roster</span>
+                </div>
+                {(memberSearchQuery || memberStatusFilter !== 'all' || memberRoleFilter !== 'all' || memberResidenceFilter !== 'all' || memberDeptFilter !== 'all' || memberSemFilter !== 'all' || memberSecFilter !== 'all') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMemberSearchQuery('')
+                      setMemberStatusFilter('all')
+                      setMemberRoleFilter('all')
+                      setMemberResidenceFilter('all')
+                      setMemberDeptFilter('all')
+                      setMemberSemFilter('all')
+                      setMemberSecFilter('all')
+                    }}
+                    className="text-[11px] font-mono font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" /> Clear Filters
+                  </button>
+                )}
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={memberSearchQuery}
+                  onChange={e => setMemberSearchQuery(e.target.value)}
+                  placeholder="Search by member name, SRN, email, phone, squad name, or department..."
+                  className="w-full bg-[#080E1C] border border-slate-800 focus:border-[#00D2FF] rounded-xl py-2.5 px-3 pl-9 pr-8 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+                />
+                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
+                {memberSearchQuery && (
+                  <button
+                    onClick={() => setMemberSearchQuery('')}
+                    className="absolute right-3 top-2.5 text-slate-500 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Multi-Select Filters Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 text-xs">
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Squad Status</label>
+                  <select
+                    value={memberStatusFilter}
+                    onChange={e => setMemberStatusFilter(e.target.value as any)}
+                    className="w-full py-2 px-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-slate-200 focus:border-[#00D2FF] outline-none text-xs cursor-pointer font-medium"
+                  >
+                    <option value="all" className="bg-[#0C1222]">All Statuses</option>
+                    <option value="approved" className="bg-[#0C1222]">Approved</option>
+                    <option value="pending" className="bg-[#0C1222]">Pending</option>
+                    <option value="rejected" className="bg-[#0C1222]">Rejected</option>
+                  </select>
+                </div>
+
+                {/* Role Filter */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Member Role</label>
+                  <select
+                    value={memberRoleFilter}
+                    onChange={e => setMemberRoleFilter(e.target.value as any)}
+                    className="w-full py-2 px-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-slate-200 focus:border-[#00D2FF] outline-none text-xs cursor-pointer font-medium"
+                  >
+                    <option value="all" className="bg-[#0C1222]">All Roles</option>
+                    <option value="leader" className="bg-[#0C1222]">Team Leaders Only</option>
+                    <option value="member" className="bg-[#0C1222]">Squad Members Only</option>
+                  </select>
+                </div>
+
+                {/* Residence Filter */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Residence Status</label>
+                  <select
+                    value={memberResidenceFilter}
+                    onChange={e => setMemberResidenceFilter(e.target.value)}
+                    className="w-full py-2 px-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-slate-200 focus:border-[#00D2FF] outline-none text-xs cursor-pointer font-medium"
+                  >
+                    <option value="all" className="bg-[#0C1222]">All Housing</option>
+                    <option value="Hostelite" className="bg-[#0C1222]">Hostelite</option>
+                    <option value="Non-Hostelite" className="bg-[#0C1222]">Non-Hostelite</option>
+                  </select>
+                </div>
+
+                {/* Department Filter */}
+                <div className="lg:col-span-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Department</label>
+                  <select
+                    value={memberDeptFilter}
+                    onChange={e => setMemberDeptFilter(e.target.value)}
+                    className="w-full py-2 px-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-slate-200 focus:border-[#00D2FF] outline-none text-xs cursor-pointer truncate font-medium"
+                  >
+                    <option value="all" className="bg-[#0C1222]">All Departments</option>
+                    {PES_DEPARTMENTS.map(dept => (
+                      <option key={dept} value={dept} className="bg-[#0C1222]">{dept}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Semester Filter */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Semester</label>
+                  <select
+                    value={memberSemFilter}
+                    onChange={e => setMemberSemFilter(e.target.value)}
+                    className="w-full py-2 px-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-slate-200 focus:border-[#00D2FF] outline-none text-xs cursor-pointer font-medium"
+                  >
+                    <option value="all" className="bg-[#0C1222]">All Sem</option>
+                    {SEMESTER_OPTIONS.map(sem => (
+                      <option key={sem} value={sem} className="bg-[#0C1222]">Sem {sem}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Section Filter */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Section</label>
+                  <select
+                    value={memberSecFilter}
+                    onChange={e => setMemberSecFilter(e.target.value)}
+                    className="w-full py-2 px-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-slate-200 focus:border-[#00D2FF] outline-none text-xs cursor-pointer font-medium"
+                  >
+                    <option value="all" className="bg-[#0C1222]">All Sec</option>
+                    {SECTION_OPTIONS.map(sec => (
+                      <option key={sec} value={sec} className="bg-[#0C1222]">Sec {sec}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Status Footer & Sort Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80 text-xs">
+                <span className="font-mono text-[11px] text-slate-400">
+                  Showing <strong className="text-cyan-400 font-bold">{filteredMembers.length}</strong> of {allMembersList.length} members
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Sort By:</span>
+                  <select
+                    value={memberSortBy}
+                    onChange={e => setMemberSortBy(e.target.value as any)}
+                    className="py-1 px-2.5 rounded-lg border border-slate-800 bg-[#080E1C] text-cyan-300 font-mono text-xs focus:border-[#00D2FF] outline-none cursor-pointer"
+                  >
+                    <option value="name_asc" className="bg-[#0C1222]">Member Name (A-Z)</option>
+                    <option value="team_asc" className="bg-[#0C1222]">Squad Name (A-Z)</option>
+                    <option value="srn_asc" className="bg-[#0C1222]">SRN (Ascending)</option>
+                    <option value="date_desc" className="bg-[#0C1222]">Registration Date (Newest)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Members Table (Desktop) */}
+            {dataLoading ? (
+              <div className="py-20 text-center">
+                <div className="w-8 h-8 border-3 border-[#00D2FF] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <p className="text-xs text-slate-400">Loading member directory...</p>
+              </div>
+            ) : filteredMembers.length === 0 ? (
+              <div className="bg-[#0C1222] p-12 text-center rounded-3xl border border-slate-800 space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-950/60 border border-cyan-800 text-[#00D2FF] flex items-center justify-center mx-auto mb-2">
+                  <Users className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-bold text-white">No Members Match the Filter Criteria</h3>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Try clearing your search query or adjusting your filters for status, department, and residence.
+                </p>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMemberSearchQuery('')
+                      setMemberStatusFilter('all')
+                      setMemberRoleFilter('all')
+                      setMemberResidenceFilter('all')
+                      setMemberDeptFilter('all')
+                      setMemberSemFilter('all')
+                      setMemberSecFilter('all')
+                    }}
+                    className="py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Reset All Filters
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-[#0C1222] rounded-3xl border border-slate-800 shadow-xl overflow-hidden">
+                {/* Desktop View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 bg-[#080E1C]/80 text-slate-400 uppercase text-[10px] tracking-wider font-extrabold">
+                        <th className="py-3.5 px-3">#</th>
+                        <th className="py-3.5 px-3">Member & Role</th>
+                        <th className="py-3.5 px-3">SRN</th>
+                        <th className="py-3.5 px-3">Contact</th>
+                        <th className="py-3.5 px-3">Department & Class</th>
+                        <th className="py-3.5 px-3 text-center">Housing</th>
+                        <th className="py-3.5 px-3 text-center">Squad Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-sans">
+                      {filteredMembers.map((m, idx) => {
+                        return (
+                          <tr key={m.id} className="hover:bg-slate-800/40 transition-colors">
+                            {/* Sequential Index */}
+                            <td className="py-3.5 px-3 font-mono text-slate-500">
+                              {idx + 1}
+                            </td>
+
+                            {/* Name, Role & Squad */}
+                            <td className="py-3.5 px-3">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0072FF] to-[#00D2FF] text-slate-950 font-black text-xs uppercase flex items-center justify-center shrink-0">
+                                  {m.name.charAt(0) || 'M'}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-white text-sm">{m.name}</span>
+                                    <span className={`px-2 py-0.2 rounded text-[9px] font-mono font-bold uppercase border ${
+                                      m.is_leader
+                                        ? 'bg-cyan-950 text-cyan-300 border-cyan-700'
+                                        : 'bg-slate-900 text-slate-400 border-slate-800'
+                                    }`}>
+                                      {m.member_role}
+                                    </span>
+                                  </div>
+                                  <span className="text-[11px] text-cyan-400 block truncate font-medium">
+                                    Squad: {m.team_name}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* SRN */}
+                            <td className="py-3.5 px-3">
+                              <span className="font-mono font-bold text-xs text-slate-200 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-800">
+                                {m.srn}
+                              </span>
+                            </td>
+
+                            {/* Contact (Email + Phone) */}
+                            <td className="py-3.5 px-3">
+                              <div className="space-y-0.5">
+                                <a
+                                  href={`mailto:${m.email}`}
+                                  className="text-slate-300 hover:text-[#00D2FF] flex items-center gap-1 font-mono text-[11px] transition-colors"
+                                >
+                                  <Mail className="w-3 h-3 text-slate-500 shrink-0" />
+                                  <span className="truncate max-w-[180px]">{m.email}</span>
+                                </a>
+                                {m.phone && m.phone !== 'N/A' && (
+                                  <a
+                                    href={`tel:${m.phone}`}
+                                    className="text-slate-400 hover:text-white flex items-center gap-1 font-mono text-[11px] transition-colors"
+                                  >
+                                    <Phone className="w-3 h-3 text-slate-500 shrink-0" />
+                                    <span>{m.phone}</span>
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Department & Cohort */}
+                            <td className="py-3.5 px-3">
+                              <div className="font-medium text-slate-300 text-xs truncate max-w-[200px]" title={m.department}>
+                                {m.department}
+                              </div>
+                              <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
+                                {m.semester !== 'N/A' ? `Sem ${m.semester}` : 'No Sem'} • {m.section !== 'N/A' ? `Sec ${m.section}` : 'No Sec'}
+                              </div>
+                            </td>
+
+                            {/* Housing */}
+                            <td className="py-3.5 px-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border uppercase inline-block ${
+                                (m.residence_type || '').toLowerCase() === 'hostelite'
+                                  ? 'bg-amber-950 text-amber-300 border-amber-700'
+                                  : 'bg-slate-900 text-slate-400 border-slate-800'
+                              }`}>
+                                {m.residence_type || 'Non-Hostelite'}
+                              </span>
+                            </td>
+
+                            {/* Squad Status */}
+                            <td className="py-3.5 px-3 text-center">
+                              <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold border uppercase inline-flex items-center gap-1 ${
+                                m.status === 'approved'
+                                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
+                                  : m.status === 'rejected'
+                                  ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                                  : 'bg-amber-950/80 text-amber-300 border-amber-700'
+                              }`}>
+                                {m.status === 'approved' && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
+                                {m.status === 'pending' && <Clock className="w-3 h-3 text-amber-400" />}
+                                {m.status === 'rejected' && <XCircle className="w-3 h-3 text-rose-400" />}
+                                <span>{m.status}</span>
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Cards View */}
+                <div className="block md:hidden divide-y divide-slate-800/80">
+                  {filteredMembers.map((m, idx) => (
+                    <div key={m.id} className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs text-slate-500 font-bold">#{idx + 1}</span>
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-white text-sm">{m.name}</span>
+                              <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono font-bold uppercase border ${
+                                m.is_leader
+                                  ? 'bg-cyan-950 text-cyan-300 border-cyan-700'
+                                  : 'bg-slate-900 text-slate-400 border-slate-800'
+                              }`}>
+                                {m.member_role}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-cyan-400 block font-medium">Squad: {m.team_name}</span>
+                          </div>
+                        </div>
+
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold border uppercase ${
+                          m.status === 'approved'
+                            ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                            : m.status === 'rejected'
+                            ? 'bg-rose-950 text-rose-300 border-rose-800'
+                            : 'bg-amber-950 text-amber-300 border-amber-700'
+                        }`}>
+                          {m.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px] font-mono bg-[#080E1C] p-2.5 rounded-xl border border-slate-800">
+                        <div>
+                          <span className="text-slate-500 block text-[9px] uppercase">SRN</span>
+                          <span className="font-bold text-slate-200">{m.srn}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[9px] uppercase">Class</span>
+                          <span className="text-slate-300">Sem {m.semester} • Sec {m.section}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500 block text-[9px] uppercase">Department</span>
+                          <span className="text-slate-300 truncate block">{m.department}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500 block text-[9px] uppercase">Contact</span>
+                          <span className="text-slate-300 block truncate">{m.email} • {m.phone}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
