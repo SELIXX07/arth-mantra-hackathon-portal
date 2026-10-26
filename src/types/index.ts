@@ -65,12 +65,21 @@ export interface TeamMember {
   residence_type?: string;
   assigned_problem_statement?: ProblemStatement;
   assigned_datasheet?: TeamDatasheet;
+  assigned_auction_sheet?: AuctionSheet;
 }
 
 export interface TeamDatasheet {
   file_url: string;
   file_name: string;
   assigned_at: string;
+  notes?: string;
+}
+
+export interface AuctionSheet {
+  file_url: string;
+  file_name: string;
+  uploaded_at: string;
+  file_size?: number;
   notes?: string;
 }
 
@@ -90,6 +99,8 @@ export interface Hackathon {
   credentials_released?: boolean;
   ps_released?: boolean;
   datasheets_released?: boolean;
+  auction_released?: boolean;
+  auction_sheet?: AuctionSheet;
   created_by: string;
   created_at: string;
 }
@@ -129,6 +140,7 @@ export interface TeamRegistration {
   judge_notes?: string;
   assigned_problem_statement?: ProblemStatement;
   assigned_datasheet?: TeamDatasheet;
+  assigned_auction_sheet?: AuctionSheet;
   created_at: string;
   updated_at: string;
 }

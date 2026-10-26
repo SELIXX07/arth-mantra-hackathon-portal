@@ -1,4 +1,4 @@
-import { TeamRegistration, Hackathon, AdminUser, UserProfile, RegistrationStatus, UserRole, TeamMember, ProblemStatement, TeamDatasheet } from '@/types'
+import { TeamRegistration, Hackathon, AdminUser, UserProfile, RegistrationStatus, UserRole, TeamMember, ProblemStatement, TeamDatasheet, AuctionSheet } from '@/types'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 
@@ -72,6 +72,8 @@ function parseHackathon(data: any): Hackathon {
   let credentialsReleased = Boolean(data.credentials_released)
   let psReleased = Boolean(data.ps_released)
   let datasheetsReleased = Boolean(data.datasheets_released)
+  let auctionReleased = Boolean(data.auction_released)
+  let auctionSheet: AuctionSheet | undefined = data.auction_sheet || undefined
   if (data.upi_id && typeof data.upi_id === 'string' && data.upi_id.includes('MARKET_CONFIG:')) {
     try {
       const jsonStr = data.upi_id.substring(data.upi_id.indexOf('MARKET_CONFIG:') + 'MARKET_CONFIG:'.length)
@@ -80,6 +82,8 @@ function parseHackathon(data: any): Hackathon {
         if (parsed.credentials_released !== undefined) credentialsReleased = Boolean(parsed.credentials_released)
         if (parsed.ps_released !== undefined) psReleased = Boolean(parsed.ps_released)
         if (parsed.datasheets_released !== undefined) datasheetsReleased = Boolean(parsed.datasheets_released)
+        if (parsed.auction_released !== undefined) auctionReleased = Boolean(parsed.auction_released)
+        if (parsed.auction_sheet !== undefined) auctionSheet = parsed.auction_sheet || undefined
       }
     } catch (_) {}
   }
@@ -87,7 +91,9 @@ function parseHackathon(data: any): Hackathon {
     ...data,
     credentials_released: credentialsReleased,
     ps_released: psReleased,
-    datasheets_released: datasheetsReleased
+    datasheets_released: datasheetsReleased,
+    auction_released: auctionReleased,
+    auction_sheet: auctionSheet
   } as Hackathon
 }
 
@@ -171,7 +177,13 @@ export const LocalDB = {
 
   async updateMarketConfig(
     hackathonId: string,
-    updates: { credentials_released?: boolean; ps_released?: boolean; datasheets_released?: boolean }
+    updates: { 
+      credentials_released?: boolean; 
+      ps_released?: boolean; 
+      datasheets_released?: boolean;
+      auction_released?: boolean;
+      auction_sheet?: AuctionSheet | null;
+    }
   ): Promise<boolean> {
     const supabase = getSupabase()
     let currentConfig: Record<string, boolean> = {}
@@ -214,6 +226,8 @@ export const LocalDB = {
             if (merged.credentials_released !== undefined) hackathons[idx].credentials_released = Boolean(merged.credentials_released)
             if (merged.ps_released !== undefined) hackathons[idx].ps_released = Boolean(merged.ps_released)
             if (merged.datasheets_released !== undefined) hackathons[idx].datasheets_released = Boolean(merged.datasheets_released)
+            if (merged.auction_released !== undefined) hackathons[idx].auction_released = Boolean(merged.auction_released)
+            if (merged.auction_sheet !== undefined) hackathons[idx].auction_sheet = merged.auction_sheet || undefined
             this.saveHackathons(hackathons)
           }
           return true
@@ -247,6 +261,29 @@ export const LocalDB = {
 
   async setDatasheetsReleased(hackathonId: string, released: boolean): Promise<boolean> {
     return this.updateMarketConfig(hackathonId, { datasheets_released: Boolean(released) })
+  },
+
+  async setAuctionReleased(hackathonId: string, released: boolean): Promise<boolean> {
+    return this.updateMarketConfig(hackathonId, { auction_released: Boolean(released) })
+  },
+
+  async setAuctionSheet(hackathonId: string, sheet: AuctionSheet | null): Promise<boolean> {
+    const success = await this.updateMarketConfig(hackathonId, { auction_sheet: sheet })
+    // Also sync to all approved registrations locally
+    try {
+      const all = this.getRegistrations()
+      let changed = false
+      all.forEach((reg, i) => {
+        if (reg.hackathon_id === hackathonId && reg.status === 'approved') {
+          all[i].assigned_auction_sheet = sheet || undefined
+          changed = true
+        }
+      })
+      if (changed) {
+        this.saveRegistrations(all)
+      }
+    } catch (_) {}
+    return success
   },
 
   async addHackathon(hackathon: Omit<Hackathon, 'id' | 'created_at'>): Promise<Hackathon> {
@@ -1951,6 +1988,7 @@ function parseRegistration(raw: any): TeamRegistration {
   const members = Array.isArray(raw.members) ? raw.members : (typeof raw.members === 'string' ? JSON.parse(raw.members) : [])
   const assigned_problem_statement = raw.assigned_problem_statement || (members[0] && members[0].assigned_problem_statement) || undefined
   const assigned_datasheet = raw.assigned_datasheet || (members[0] && members[0].assigned_datasheet) || undefined
+  const assigned_auction_sheet = raw.assigned_auction_sheet || (members[0] && members[0].assigned_auction_sheet) || undefined
 
   return {
     ...raw,
@@ -1961,6 +1999,7 @@ function parseRegistration(raw: any): TeamRegistration {
     judge_notes: raw.judge_notes || undefined,
     assigned_problem_statement,
     assigned_datasheet,
+    assigned_auction_sheet,
     members
   }
 }

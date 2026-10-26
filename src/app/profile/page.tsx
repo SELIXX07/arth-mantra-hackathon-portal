@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import {
   User, Mail, Phone, GraduationCap, Edit3, Save, X, CheckCircle2, Clock, AlertCircle,
   ExternalLink, Users, Trophy, Compass, ArrowRight, MessageSquare, BookOpen, Layers, Bookmark, Building2,
-  Activity, Copy, Check, ShieldCheck, Lock, Eye, EyeOff, Download, FileSpreadsheet
+  Activity, Copy, Check, ShieldCheck, Lock, Eye, EyeOff, Download, FileSpreadsheet, Gavel, Award
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
@@ -886,6 +886,109 @@ export default function ProfilePage() {
 
                         return null;
                       })()}
+
+                      {/* ROUND 4: THE RESOURCE AUCTION SHEET (OFFICIAL MASTER INVENTORY) */}
+                      {registration.status === 'approved' && (
+                        Boolean(hackathon?.auction_released) ? (
+                          (hackathon?.auction_sheet || (registration as any).assigned_auction_sheet) ? (
+                            <div className="bg-gradient-to-br from-[#180D2E] via-[#140B26] to-[#0A0718] border-2 border-purple-500/70 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(168,85,247,0.25)] space-y-4">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-purple-900/50">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                                    <Gavel className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-mono font-black text-white text-sm uppercase tracking-wider">
+                                        ROUND 4: THE RESOURCE AUCTION SHEET
+                                      </h4>
+                                      <span className="px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 text-[10px] font-mono font-black border border-purple-700 uppercase">
+                                        Master Auction Catalog
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] text-purple-300/80 font-mono">
+                                      Official Bidding Inventory • Uniformly assigned to all approved teams
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-950/80 border border-purple-800 text-purple-300 text-[10px] font-mono font-bold self-start sm:self-auto">
+                                  <Award className="w-3 h-3 text-purple-400" /> All Squads Catalog
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                                  <FileSpreadsheet className="w-4 h-4 text-purple-400 shrink-0" />
+                                  <span>{(hackathon?.auction_sheet || (registration as any).assigned_auction_sheet)?.file_name}</span>
+                                </div>
+                                {(hackathon?.auction_sheet || (registration as any).assigned_auction_sheet)?.notes && (
+                                  <p className="text-xs text-slate-300 leading-relaxed font-sans pt-1">
+                                    {(hackathon?.auction_sheet || (registration as any).assigned_auction_sheet)?.notes}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="pt-2">
+                                <a
+                                  href={(hackathon?.auction_sheet || (registration as any).assigned_auction_sheet)?.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download={(hackathon?.auction_sheet || (registration as any).assigned_auction_sheet)?.file_name || 'Round4_Auction_Sheet.xlsx'}
+                                  className="inline-flex items-center gap-2 py-2.5 px-5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-500 hover:from-purple-500 hover:to-fuchsia-400 text-white font-mono font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] cursor-pointer"
+                                >
+                                  <Download className="w-4 h-4" /> Download Official Auction Sheet
+                                </a>
+                              </div>
+
+                              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 font-mono flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
+                                <span>
+                                  <strong>Auction Rules:</strong> Review the lots, asset valuations, and starting base prices carefully before the live auctioneer gavel begins.
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                                  <Gavel className="w-4 h-4 text-purple-400" />
+                                </div>
+                                <div>
+                                  <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                                    Round 4: Resource Auction Sheet
+                                  </div>
+                                  <div className="text-[11px] text-slate-400 font-sans">
+                                    The master auction inventory sheet will be uploaded here shortly by the auction coordinators.
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
+                                Awaiting Upload
+                              </span>
+                            </div>
+                          )
+                        ) : (
+                          <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                                <Lock className="w-4 h-4 text-purple-400" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                                  Round 4: Resource Auction Sheet
+                                </div>
+                                <div className="text-[11px] text-slate-400 font-sans">
+                                  The official auction sheet and asset catalog will be released here once Round 4 begins.
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
+                              Concealed by Admin
+                            </span>
+                          </div>
+                        )
+                      )}
 
                       {/* Live Scorecard (if approved) */}
                       {registration.status === 'approved' && (

@@ -9,13 +9,13 @@ import {
   FileSpreadsheet, ExternalLink, Copy, Upload, Image as ImageIcon,
   ShieldCheck, DollarSign, Terminal, ChevronDown, ChevronUp, Link as LinkIcon,
   Trophy, Award, TrendingUp, Star, KeyRound, Activity, Play, Pause, Square, Database, BookOpen, FileText, Layers,
-  UserCheck, Mail, Phone, GraduationCap, Building2
+  UserCheck, Mail, Phone, GraduationCap, Building2, Gavel
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
 import { LocalDB, getTeamTraderPin, exportRegistrationsToExcel, exportLeaderboardToExcel, exportFilteredMembersToExcel, exportProfilesToExcel, PRESET_ARTH_MANTRA } from '@/lib/storage'
 import { STOCK_MARKET_URL } from '@/lib/config'
-import { TeamRegistration, AdminUser, Hackathon, UserRole, UserProfile, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ProblemStatement, TeamDatasheet } from '@/types'
+import { TeamRegistration, AdminUser, Hackathon, UserRole, UserProfile, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ProblemStatement, TeamDatasheet, AuctionSheet } from '@/types'
 import Link from 'next/link'
 
 export const ARTH_MANTRA_PS_PRESETS: ProblemStatement[] = [
@@ -197,6 +197,91 @@ export default function AdminDashboardPage() {
     }
   }
 
+  const handleToggleAuctionRelease = async (released: boolean) => {
+    try {
+      const active = hackathonsList.find(h => h.is_active) || (await LocalDB.getActiveHackathon())
+      if (!active) {
+        showToast('No active hackathon found to update.', 'warning')
+        return
+      }
+      await LocalDB.setAuctionReleased(active.id, released)
+      setHackathonsList(prev => prev.map(h => h.id === active.id ? { ...h, auction_released: released } : h))
+      const msg = released ? 'Round 4 Auction Sheet revealed to all approved teams!' : 'Auction Sheet is now concealed from teams.'
+      showToast(msg, released ? 'success' : 'info')
+      await loadData(true)
+    } catch (err: any) {
+      showToast('Failed to toggle auction sheet: ' + err.message, 'error')
+    }
+  }
+
+  const handleUploadAuctionFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploadingAuction(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (!res.ok) throw new Error('Upload failed')
+      const data = await res.json()
+      setAuctionFileUrl(data.url)
+      setAuctionFileName(file.name)
+      setAuctionFileSize(file.size)
+      showToast('Auction file uploaded to cloud storage!', 'success')
+    } catch (err: any) {
+      showToast('Error uploading auction sheet: ' + err.message, 'error')
+    } finally {
+      setIsUploadingAuction(false)
+    }
+  }
+
+  const handleSaveAuctionSheet = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!auctionFileUrl || !auctionFileName) {
+      showToast('Please upload an auction list file first.', 'warning')
+      return
+    }
+    setIsSubmittingAuction(true)
+    try {
+      const active = hackathonsList.find(h => h.is_active) || (await LocalDB.getActiveHackathon())
+      if (!active) {
+        showToast('No active hackathon found.', 'warning')
+        return
+      }
+      const sheet: AuctionSheet = {
+        file_url: auctionFileUrl,
+        file_name: auctionFileName,
+        file_size: auctionFileSize,
+        uploaded_at: new Date().toISOString(),
+        notes: auctionNotes.trim() || undefined
+      }
+      await LocalDB.setAuctionSheet(active.id, sheet)
+      setHackathonsList(prev => prev.map(h => h.id === active.id ? { ...h, auction_sheet: sheet } : h))
+      showToast(`Master Auction Sheet "${auctionFileName}" successfully assigned to all teams!`, 'success')
+      setIsAuctionModalOpen(false)
+      await loadData(true)
+    } catch (err: any) {
+      showToast('Error saving auction sheet: ' + err.message, 'error')
+    } finally {
+      setIsSubmittingAuction(false)
+    }
+  }
+
+  const handleRemoveAuctionSheet = async () => {
+    if (!confirm('Are you sure you want to remove the master auction sheet?')) return
+    try {
+      const active = hackathonsList.find(h => h.is_active) || (await LocalDB.getActiveHackathon())
+      if (!active) return
+      await LocalDB.setAuctionSheet(active.id, null)
+      setHackathonsList(prev => prev.map(h => h.id === active.id ? { ...h, auction_sheet: undefined } : h))
+      showToast('Master auction sheet removed.', 'info')
+      setIsAuctionModalOpen(false)
+      await loadData(true)
+    } catch (err: any) {
+      showToast('Error removing auction sheet: ' + err.message, 'error')
+    }
+  }
+
   const handleToggleDatasheetRelease = async (released: boolean) => {
     try {
       const active = hackathonsList.find(h => h.is_active) || (await LocalDB.getActiveHackathon())
@@ -292,6 +377,15 @@ export default function AdminDashboardPage() {
   const [psPdfName, setPsPdfName] = useState('')
   const [psPdfUploading, setPsPdfUploading] = useState(false)
   const [isSubmittingPS, setIsSubmittingPS] = useState(false)
+
+  // Auction Sheet State
+  const [isAuctionModalOpen, setIsAuctionModalOpen] = useState(false)
+  const [auctionFileUrl, setAuctionFileUrl] = useState('')
+  const [auctionFileName, setAuctionFileName] = useState('')
+  const [auctionFileSize, setAuctionFileSize] = useState<number | undefined>(undefined)
+  const [auctionNotes, setAuctionNotes] = useState('')
+  const [isUploadingAuction, setIsUploadingAuction] = useState(false)
+  const [isSubmittingAuction, setIsSubmittingAuction] = useState(false)
 
   // Datasheet Modal State
   const [datasheetModalTeam, setDatasheetModalTeam] = useState<TeamRegistration | null>(null)
@@ -1563,7 +1657,7 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
                 {/* 1. Problem Statements Release Card */}
                 <div className={`p-4 rounded-2xl border transition-all flex flex-col justify-between shadow-lg ${
                   activeHackathon?.ps_released
@@ -1728,6 +1822,116 @@ export default function AdminDashboardPage() {
                     >
                       <RefreshCw className="w-3 h-3" /> Sync
                     </button>
+                  </div>
+                </div>
+
+                {/* 4. Round 4 Resource Auction Sheet Release Card */}
+                <div className={`p-4 rounded-2xl border transition-all flex flex-col justify-between shadow-lg ${
+                  activeHackathon?.auction_released
+                    ? 'bg-gradient-to-br from-purple-950/90 via-[#180B2B] to-[#0A0718] border-purple-500/80 shadow-[0_0_20px_rgba(168,85,247,0.2)]'
+                    : 'bg-gradient-to-br from-[#0C1427] to-[#0A1220] border-slate-800'
+                }`}>
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
+                          activeHackathon?.auction_released ? 'bg-purple-500/20 border-purple-500/50 text-purple-400' : 'bg-slate-800 border-slate-700 text-slate-400'
+                        }`}>
+                          <Gavel className="w-4 h-4" />
+                        </div>
+                        <span className="font-mono font-black text-white text-xs uppercase tracking-wider">
+                          Round 4: Resource Auction
+                        </span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-black border uppercase ${
+                        activeHackathon?.auction_released ? 'bg-purple-950 text-purple-300 border-purple-600' : 'bg-slate-900 text-slate-400 border-slate-700'
+                      }`}>
+                        {activeHackathon?.auction_released ? '● Revealed' : '○ Hidden'}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-300 leading-snug">
+                      {activeHackathon?.auction_sheet ? (
+                        <>
+                          <span className="text-white font-bold block truncate">
+                            📄 {activeHackathon.auction_sheet.file_name}
+                          </span>
+                          {activeHackathon?.auction_released
+                            ? 'Single master auction inventory is revealed and downloadable by all approved squads.'
+                            : 'Master auction inventory is uploaded but concealed. Click Reveal to unlock.'}
+                        </>
+                      ) : (
+                        'No auction list assigned yet. Upload the single master sheet to assign to all squads.'
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 mt-3 border-t border-slate-800/80 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAuctionRelease(!Boolean(activeHackathon?.auction_released))}
+                        className={`flex-1 py-2 px-2.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          activeHackathon?.auction_released
+                            ? 'bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-800 hover:shadow-rose-900/30'
+                            : 'bg-gradient-to-r from-purple-600 to-fuchsia-500 hover:from-purple-500 hover:to-fuchsia-400 text-white shadow-purple-900/40'
+                        }`}
+                      >
+                        {activeHackathon?.auction_released ? (
+                          <>
+                            <EyeOff className="w-3.5 h-3.5" /> Hide Sheet
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-3.5 h-3.5" /> Reveal Sheet
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (activeHackathon?.auction_sheet) {
+                            setAuctionFileUrl(activeHackathon.auction_sheet.file_url)
+                            setAuctionFileName(activeHackathon.auction_sheet.file_name)
+                            setAuctionFileSize(activeHackathon.auction_sheet.file_size)
+                            setAuctionNotes(activeHackathon.auction_sheet.notes || '')
+                          } else {
+                            setAuctionFileUrl('')
+                            setAuctionFileName('')
+                            setAuctionFileSize(undefined)
+                            setAuctionNotes('')
+                          }
+                          setIsAuctionModalOpen(true)
+                        }}
+                        className="py-2 px-3 rounded-xl font-mono font-bold text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                        title={activeHackathon?.auction_sheet ? 'Replace master auction sheet' : 'Upload master auction sheet'}
+                      >
+                        <Upload className="w-3 h-3 text-purple-400" />
+                        <span>{activeHackathon?.auction_sheet ? 'Replace' : 'Upload'}</span>
+                      </button>
+                    </div>
+
+                    {activeHackathon?.auction_sheet && (
+                      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 px-1">
+                        <a
+                          href={activeHackathon.auction_sheet.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={activeHackathon.auction_sheet.file_name}
+                          className="text-purple-400 hover:underline flex items-center gap-1"
+                        >
+                          <Download className="w-3 h-3" /> Test Download
+                        </a>
+                        <button
+                          type="button"
+                          onClick={handleRemoveAuctionSheet}
+                          className="text-rose-400 hover:text-rose-300 hover:underline cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -4245,6 +4449,133 @@ export default function AdminDashboardPage() {
                         {isSubmittingPS ? 'Saving...' : 'Assign PS to Team'}
                       </button>
                     </div>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* ── MODAL: ASSIGN SINGLE MASTER AUCTION LIST TO ALL PARTICIPANTS ── */}
+        <AnimatePresence>
+          {isAuctionModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="w-full max-w-lg bg-[#0C1222] border border-purple-500/60 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5"
+              >
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                      <Gavel className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-mono font-black text-white text-base uppercase tracking-wider">
+                        Assign Round 4 Auction Sheet
+                      </h3>
+                      <p className="text-xs text-purple-300/80 font-mono">
+                        Upload 1 master auction inventory distributed to all squads
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAuctionModalOpen(false)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveAuctionSheet} className="space-y-4">
+                  {/* File Upload Box */}
+                  <div>
+                    <label className="text-xs font-mono font-bold text-slate-300 block mb-1.5 uppercase tracking-wider">
+                      Auction Inventory File (.xlsx, .xls, .pdf, .csv, .docx)
+                    </label>
+                    
+                    <div className="border-2 border-dashed border-purple-800/80 hover:border-purple-500 rounded-2xl p-5 text-center bg-purple-950/20 transition-colors">
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls,.pdf,.csv,.docx"
+                        onChange={handleUploadAuctionFile}
+                        disabled={isUploadingAuction}
+                        className="hidden"
+                        id="auction-sheet-upload"
+                      />
+                      <label htmlFor="auction-sheet-upload" className="cursor-pointer block">
+                        <Upload className="w-8 h-8 text-purple-400 mx-auto mb-2 animate-bounce" />
+                        <span className="text-xs font-mono font-bold text-white block">
+                          {isUploadingAuction ? 'Uploading to cloud storage...' : 'Click to select master auction sheet'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-sans mt-1 block">
+                          Excel (.xlsx / .xls), PDF catalog, or CSV tables (Max 25MB)
+                        </span>
+                      </label>
+                    </div>
+
+                    {auctionFileName && (
+                      <div className="mt-2.5 p-3 rounded-xl bg-purple-950/60 border border-purple-800 flex items-center justify-between text-xs font-mono">
+                        <div className="flex items-center gap-2 truncate">
+                          <FileSpreadsheet className="w-4 h-4 text-purple-400 shrink-0" />
+                          <span className="text-white font-bold truncate">{auctionFileName}</span>
+                          {auctionFileSize && (
+                            <span className="text-slate-400 text-[10px]">
+                              ({Math.round(auctionFileSize / 1024)} KB)
+                            </span>
+                          )}
+                        </div>
+                        <a
+                          href={auctionFileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#00D2FF] hover:underline text-[11px] shrink-0"
+                        >
+                          Preview
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notes / Instructions */}
+                  <div>
+                    <label className="text-xs font-mono font-bold text-slate-300 block mb-1.5 uppercase tracking-wider">
+                      Auction Instructions / Guidelines (Optional)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={auctionNotes}
+                      onChange={(e) => setAuctionNotes(e.target.value)}
+                      placeholder="e.g. Starting bids for all assets are listed on Sheet 1. Review multiplier rules before bidding."
+                      className="w-full bg-[#080E1C] border border-slate-800 focus:border-purple-500 rounded-xl p-3 text-xs text-white outline-none resize-none font-sans"
+                    />
+                  </div>
+
+                  {/* Policy reminder */}
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-400 font-mono flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
+                    <span>
+                      This sheet will be assigned to <strong>all approved teams ({approvedTeams} squads)</strong> at once.
+                    </span>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setIsAuctionModalOpen(false)}
+                      className="py-2.5 px-4 rounded-xl border border-slate-700 text-xs font-bold text-slate-400 hover:text-white cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingAuction || isUploadingAuction || !auctionFileUrl}
+                      className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 hover:from-purple-500 hover:to-indigo-400 text-white font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] cursor-pointer disabled:opacity-50"
+                    >
+                      {isSubmittingAuction ? 'Assigning to All Teams...' : 'Assign Master Auction Sheet'}
+                    </button>
                   </div>
                 </form>
               </motion.div>
