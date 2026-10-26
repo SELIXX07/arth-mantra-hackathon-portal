@@ -42,7 +42,7 @@ export const ARTH_MANTRA_PS_PRESETS: ProblemStatement[] = [
   {
     track: 'Fintech & WealthTech Architecture',
     title: 'Autonomous Portfolio Rebalancing Engine for Multi-Asset Retail Liquidity',
-    description: 'Build an autonomous algorithmic robo-advisory rebalancing framework that continuously optimizes capital between volatile equity instruments and liquid innovation credits under slippage constraints.',
+    description: 'Build an autonomous algorithmic robo-advisory rebalancing framework that continuously optimizes capital between volatile equity instruments and liquid treasury cash reserves under slippage constraints.',
     deliverables: '1. Portfolio allocation algorithm & Sharpe ratio optimizer.\n2. Slippage & transaction cost mitigation protocol.\n3. Technical architecture diagram.',
     resources: 'https://pes.edu/arth-mantra/resources/ps-track-4.pdf'
   },
@@ -249,7 +249,7 @@ export default function AdminDashboardPage() {
   const [rejectionReason, setRejectionReason] = useState('')
   const [isSubmittingReject, setIsSubmittingReject] = useState(false)
 
-  // Scoring Modal State - 6 Rounds + Innovation Credit System
+  // Scoring Modal State - 6 Rounds
   const [scoringTeam, setScoringTeam] = useState<TeamRegistration | null>(null)
   const [scoreR1, setScoreR1] = useState<number>(0)
   const [scoreR2, setScoreR2] = useState<number>(0)
@@ -258,7 +258,7 @@ export default function AdminDashboardPage() {
   const [scoreR5, setScoreR5] = useState<number>(0)
   const [scoreR6, setScoreR6] = useState<number>(0)
 
-  // Innovation Credit (IC) Wallet State
+  // Evaluation Bonus State
   const [icStarting, setIcStarting] = useState<number>(10000)
   const [icStockTrades, setIcStockTrades] = useState<number>(0)
   const [icAuctionSpent, setIcAuctionSpent] = useState<number>(0)
@@ -582,7 +582,7 @@ export default function AdminDashboardPage() {
         setRegistrations(prev =>
           prev.map(r => r.id === scoringTeam.id ? { ...r, ...updated } : r)
         )
-        showToast(`Scores & IC Wallet updated for team "${scoringTeam.team_name}"!`, 'success')
+        showToast(`Scores updated for team "${scoringTeam.team_name}"!`, 'success')
         setScoringTeam(null)
         await loadData(true)
       }
@@ -2105,12 +2105,11 @@ export default function AdminDashboardPage() {
                           <span className="text-slate-400">R6: <strong className="text-cyan-400">{team.round_6_score || 0}</strong></span>
                         </div>
 
-                        <div className="flex items-center gap-2 bg-cyan-950/40 px-2.5 py-1.5 rounded-xl border border-cyan-800/80 text-xs">
-                          <span className="text-cyan-300 font-mono font-bold">💰 {team.ic_balance !== undefined ? team.ic_balance : 10000} IC</span>
-                          {team.brownie_points ? (
+                        {team.brownie_points ? (
+                          <div className="flex items-center gap-2 bg-amber-950/40 px-2.5 py-1.5 rounded-xl border border-amber-800/80 text-xs">
                             <span className="text-amber-400 font-mono font-bold">★ +{team.brownie_points} BP</span>
-                          ) : null}
-                        </div>
+                          </div>
+                        ) : null}
 
                         <div className="bg-[#FF7A00]/15 px-3 py-1.5 rounded-xl border border-[#FF7A00]/40 text-xs">
                           <span className="text-[#FFD700] font-black text-sm">
@@ -2483,10 +2482,10 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-white tracking-tight">
-                      Round 2: Stock Market Simulation Credentials Hub
+                      Round 3: Stock Market Simulation Credentials Hub
                     </h2>
                     <p className="text-xs text-slate-400">
-                      Manage team credential reveals. All live trading bells, round duration timers, share inductions, base IC allocations, and live trade audits are operated exclusively from the Stock Market Terminal.
+                      Manage team credential reveals. All live trading bells, round duration timers, share inductions, base allocations, and live trade audits are operated exclusively from the Stock Market Terminal.
                     </p>
                   </div>
                 </div>
@@ -2599,7 +2598,7 @@ export default function AdminDashboardPage() {
                       Stock Market Application Portals & Command Center
                     </h3>
                     <p className="text-xs text-slate-400">
-                      All live trading controls, bells, timers, inductions, base IC settings, and live trade audits are operated exclusively in the Stock Market Center.
+                      All live trading controls, bells, timers, inductions, capital settings, and live trade audits are operated exclusively in the Stock Market Center.
                     </p>
                   </div>
                 </div>
@@ -2628,7 +2627,7 @@ export default function AdminDashboardPage() {
                       <ExternalLink className="w-4 h-4 text-indigo-400 shrink-0" />
                     </div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Market bells (Open/Close), 1-hr timed market, pre-scheduling, share inductions, breaking shocks, base IC allocation, and live trade audit surveillance.
+                      Market bells (Open/Close), 1-hr timed market, pre-scheduling, share inductions, breaking shocks, starting capital allocation, and live trade audit surveillance.
                     </p>
                   </div>
                   <div className="mt-3 pt-2 border-t border-indigo-900/40 font-mono text-[10px] text-indigo-400 font-bold uppercase">
@@ -2705,7 +2704,7 @@ export default function AdminDashboardPage() {
                       <th className="py-2.5 px-3">Team Code</th>
                       <th className="py-2.5 px-3">Trader PIN</th>
                       <th className="py-2.5 px-3">Leader Email</th>
-                      <th className="py-2.5 px-3 text-right">Initial Capital</th>
+                      <th className="py-2.5 px-3 text-right">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
@@ -2721,7 +2720,7 @@ export default function AdminDashboardPage() {
                             <td className="py-2.5 px-3 font-bold text-cyan-400">{teamCode}</td>
                             <td className="py-2.5 px-3 text-slate-300">{pin}</td>
                             <td className="py-2.5 px-3 text-slate-400">{reg.leader_email}</td>
-                            <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">10,000 IC</td>
+                            <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">Authorized</td>
                           </tr>
                         )
                       })}
@@ -3169,20 +3168,14 @@ export default function AdminDashboardPage() {
 
         {/* ── MODAL: EDIT TEAM SCORES ───────────────────────────────── */}
         <AnimatePresence>
-          {scoringTeam && (() => {
-            const preR5Liquid = Math.max(0, icStarting - icStockTrades - icAuctionSpent)
-            const maxAllowableWager = Math.max(0, Math.min(1000, Math.floor(preR5Liquid * 0.20)))
-            const wagerBonusOrLoss = icR5Result === 'won' ? Math.floor(icR5Wager * 0.5) : (icR5Result === 'lost' ? -icR5Wager : 0)
-            const liveCalculatedLiquid = Math.max(0, preR5Liquid + wagerBonusOrLoss)
-
-            return (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-[#0C1427] max-w-2xl w-full rounded-3xl p-5 sm:p-7 border border-[#FF7A00]/50 shadow-[0_0_40px_rgba(255,122,0,0.25)] relative my-8"
-                >
+          {scoringTeam && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-[#0C1427] max-w-2xl w-full rounded-3xl p-5 sm:p-7 border border-[#FF7A00]/50 shadow-[0_0_40px_rgba(255,122,0,0.25)] relative my-8"
+              >
                   <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
                     <div className="flex items-center gap-2">
                       <Trophy className="w-5 h-5 text-[#FF7A00]" />
@@ -3191,7 +3184,7 @@ export default function AdminDashboardPage() {
                           Evaluation: {scoringTeam.team_name}
                         </span>
                         <span className="text-[10px] text-slate-400">
-                          6-Round Protocol & Innovation Credit (IC) System
+                          6-Round Strategic Competition Protocol
                         </span>
                       </div>
                     </div>
@@ -3320,139 +3313,26 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
 
-                    {/* SECTION 2: Innovation Credit (IC) System Wallet Calculator */}
-                    <div className="bg-[#080E1C] p-3.5 rounded-2xl border border-cyan-900/60 space-y-3">
+                    {/* SECTION 2: Bonus & Brownie Points */}
+                    <div className="bg-[#080E1C] p-3.5 rounded-2xl border border-amber-900/40 space-y-3">
                       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                         <span className="text-xs font-black uppercase text-amber-400 flex items-center gap-1.5">
-                          <DollarSign className="w-3.5 h-3.5" /> 2. Innovation Credit (IC) Virtual Wallet
-                        </span>
-                        <span className="text-[10px] bg-cyan-950 text-[#00D2FF] border border-cyan-800 px-2 py-0.5 rounded font-mono font-bold">
-                          Starting Capital: 10,000 IC
+                          <Star className="w-3.5 h-3.5" /> 2. Special Commendation & Bonus Points
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <label className="text-[10px] font-bold text-slate-300 block mb-1">
-                            Stock Market Purchases & Tax (IC)
-                          </label>
-                          <input
-                            type="number"
-                            value={icStockTrades}
-                            onChange={e => setIcStockTrades(Math.max(0, Number(e.target.value) || 0))}
-                            min={0}
-                            placeholder="e.g. 2550"
-                            className="w-full p-2 text-xs rounded-xl border border-slate-800 bg-[#0C1222] text-white focus:outline-none focus:border-[#00D2FF]"
-                          />
-                          <span className="text-[9px] text-slate-500">Shares bought + trading tax in R3–R4</span>
+                          <label className="text-xs font-bold text-amber-400 block mb-0.5">Brownie Points:</label>
+                          <span className="text-[10px] text-slate-400 block">Exceptional innovation, teamwork, or defense bonus</span>
                         </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-300 block mb-1">
-                            Resource Auction Payments (IC)
-                          </label>
-                          <input
-                            type="number"
-                            value={icAuctionSpent}
-                            onChange={e => setIcAuctionSpent(Math.max(0, Number(e.target.value) || 0))}
-                            min={0}
-                            placeholder="e.g. 3200"
-                            className="w-full p-2 text-xs rounded-xl border border-slate-800 bg-[#0C1222] text-white focus:outline-none focus:border-[#00D2FF]"
-                          />
-                          <span className="text-[9px] text-slate-500">Winning bids deducted in Round 4</span>
-                        </div>
-                      </div>
-
-                      {/* Pre-R5 Liquid & Wager Controls */}
-                      <div className="pt-2 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] mb-1">
-                            <span className="text-slate-400">Liquid Before Round 5:</span>
-                            <span className="text-cyan-300 font-mono font-bold">{preR5Liquid} IC</span>
-                          </div>
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-400">Max Allowable R5 Wager:</span>
-                            <span className="text-amber-400 font-mono font-bold">
-                              {maxAllowableWager} IC <span className="text-[9px] text-slate-500">(20% or 1K cap)</span>
-                            </span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-300 block mb-1">
-                            Round 5 Declared Wager (IC)
-                          </label>
-                          <input
-                            type="number"
-                            value={icR5Wager}
-                            onChange={e => {
-                              const val = Math.max(0, Number(e.target.value) || 0)
-                              setIcR5Wager(Math.min(maxAllowableWager, val))
-                            }}
-                            max={maxAllowableWager}
-                            min={0}
-                            className="w-full p-2 text-xs rounded-xl border border-slate-800 bg-[#0C1222] text-amber-300 font-bold focus:outline-none focus:border-[#FF7A00]"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Wager Outcome Selection */}
-                      <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-slate-400">R5 Wager Result:</span>
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setIcR5Result('won')}
-                              className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                icR5Result === 'won'
-                                  ? 'bg-emerald-600 text-white shadow-sm'
-                                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                              }`}
-                            >
-                              ✓ Correct (+50% Bonus)
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setIcR5Result('lost')}
-                              className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                icR5Result === 'lost'
-                                  ? 'bg-rose-600 text-white shadow-sm'
-                                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                              }`}
-                            >
-                              ✗ Incorrect (Lost)
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setIcR5Result('none')}
-                              className={`py-1 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                icR5Result === 'none'
-                                  ? 'bg-slate-700 text-white'
-                                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                              }`}
-                            >
-                              No Wager
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <label className="text-[10px] font-bold text-amber-400">Brownie Points:</label>
-                          <input
-                            type="number"
-                            value={browniePoints}
-                            onChange={e => setBrowniePoints(Number(e.target.value) || 0)}
-                            min={0}
-                            className="w-16 p-1 text-center text-xs font-bold rounded-lg border border-slate-800 bg-[#0C1222] text-amber-300 focus:outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Final Liquid Balance Summary Pill */}
-                      <div className="p-2.5 rounded-xl bg-cyan-950/40 border border-cyan-800/80 flex items-center justify-between text-xs">
-                        <span className="text-slate-300 font-bold">Remaining Liquid IC Wallet:</span>
-                        <span className="text-base font-mono font-black text-[#00D2FF]">{liveCalculatedLiquid} IC</span>
+                        <input
+                          type="number"
+                          value={browniePoints}
+                          onChange={e => setBrowniePoints(Number(e.target.value) || 0)}
+                          min={0}
+                          className="w-24 p-2 text-center text-sm font-bold rounded-xl border border-slate-800 bg-[#0C1222] text-amber-300 focus:outline-none focus:border-amber-500"
+                        />
                       </div>
                     </div>
 
@@ -3527,8 +3407,7 @@ export default function AdminDashboardPage() {
                   </form>
                 </motion.div>
               </div>
-            )
-          })()}
+            )}
         </AnimatePresence>
 
         {/* ── MODAL: ASSIGN PROBLEM STATEMENT TO TEAM ───────────────── */}

@@ -797,7 +797,7 @@ export default function ProfilePage() {
                               </div>
 
                               <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                                Your team has been credited <strong>10,000 IC</strong> starting capital. Copy your credentials below to access the terminal:
+                                Your squad has been authorized for market access. Copy your credentials below to enter the terminal:
                               </p>
 
                               <div className="grid grid-cols-2 gap-3 font-mono text-xs">

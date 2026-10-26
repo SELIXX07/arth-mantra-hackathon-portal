@@ -685,14 +685,14 @@ export default function RegisterTeamPage() {
                             3. The 6-Round Competition Protocol
                           </h4>
                           <p className="text-[11px] text-slate-400 mb-1.5">
-                            Participants will operate across six progressive strategic phases, governed by a unified virtual currency system:
+                            Participants will operate across six progressive strategic phases:
                           </p>
                           <ul className="list-disc list-inside space-y-1 text-slate-300 text-[11px] pl-1">
                             <li><strong>Round 1 – The Industry Blueprint:</strong> Problem statement diagnosis, stakeholder mapping, and initial root-cause hypothesis.</li>
                             <li><strong>Round 2 – The Intelligence Drop:</strong> Financial statements, operational datasets, and ESG metrics released to refine solution models.</li>
-                            <li><strong>Round 3 – Central Budget & Live Market:</strong> Simulation economy opens. Teams manage an allocation of 10,000 Innovation Credits (IC) across policy shifts and market assets.</li>
-                            <li><strong>Round 4 – The Resource Auction:</strong> Live competitive bidding for premium data feeds, mentor sessions, and pilot frameworks paid exclusively from team IC balances. Stock trading terminates at the close of this round.</li>
-                            <li><strong>Round 5 – Strategic Wager Challenge:</strong> High-stakes deduction and risk calculation with capped liquid IC wagers (maximum 20% of unspent liquid IC, capped at 1,000 IC).</li>
+                            <li><strong>Round 3 – Central Budget & Live Market:</strong> Simulation economy opens. Teams manage an allocation of starting capital across policy shifts and market assets.</li>
+                            <li><strong>Round 4 – The Resource Auction:</strong> Live competitive bidding for premium data feeds, mentor sessions, and pilot frameworks. Stock trading concludes at the end of this round.</li>
+                            <li><strong>Round 5 – Strategic Wager Challenge:</strong> High-stakes deduction, tactical evaluation, and risk calculation challenge.</li>
                             <li><strong>Round 6 – The Boardroom Showdown:</strong> Final deliverable defense (deck, working financial model/prototype, and implementation roadmap) presented live before executive judges.</li>
                           </ul>
                         </div>
@@ -703,7 +703,7 @@ export default function RegisterTeamPage() {
                           </h4>
                           <ul className="list-disc list-inside space-y-1 text-slate-300 text-[11px] pl-1">
                             <li><strong>Originality & Intellectual Property:</strong> All models, scripts, financial ledgers, and pitch collateral presented must be constructed during the 24-hour sprint. Pre-built templates, unauthorized repositories, or external contract work will result in immediate disqualification.</li>
-                            <li><strong>Ledger Compliance:</strong> Tampering with virtual market logs, colluding across teams to manipulate auction bids, or falsifying Innovation Credit transactions will lead to an immediate ban.</li>
+                            <li><strong>Ledger Compliance:</strong> Tampering with virtual market logs, colluding across teams to manipulate auction bids, or falsifying market transactions will lead to an immediate ban.</li>
                             <li><strong>Professional Decorum:</strong> Treat faculty, mentors, judges, and competing teams with complete professional courtesy. Disruptive behavior, shouting, or harassment will result in immediate escort off campus.</li>
                           </ul>
                         </div>

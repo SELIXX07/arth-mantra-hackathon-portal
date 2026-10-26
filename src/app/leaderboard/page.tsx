@@ -78,7 +78,7 @@ export default function LeaderboardPage() {
               Official Team Leaderboard
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl">
-              Live evaluations across all 6 strategic rounds and real-time Innovation Credit (IC) treasury balances.
+              Live evaluations across all 6 strategic rounds and real-time team rankings.
             </p>
           </div>
 

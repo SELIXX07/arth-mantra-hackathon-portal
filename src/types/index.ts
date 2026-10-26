@@ -108,7 +108,7 @@ export interface TeamRegistration {
   rejection_comment?: string;
   reviewed_by?: string;
   reviewed_at?: string;
-  // Score tracking fields (ARTHMANTRA 6-Round Structure & Innovation Credit System)
+  // Score tracking fields (ARTHMANTRA 6-Round Structure)
   score?: number;
   round_1_score?: number; // Round 1: The Industry Blueprint
   round_2_score?: number; // Round 2: The Intelligence Drop
@@ -117,14 +117,14 @@ export interface TeamRegistration {
   round_5_score?: number; // Round 5: The Hidden Insider Challenge
   round_6_score?: number; // Round 6: The Boardroom Showdown
 
-  // Innovation Credit (IC) System & Wallet Mechanics
-  ic_starting?: number; // Starting capital (10,000 IC per team)
-  ic_stock_trades?: number; // Net share purchases & trading tax
-  ic_auction_spent?: number; // Winning bids in Resource Auction
-  ic_r5_wager?: number; // Declared wager in Round 5 (max 20% liquid IC or 1,000 IC cap)
-  ic_r5_result?: 'won' | 'lost' | 'none'; // Outcome: +50% bonus if won, stake lost if lost
-  ic_balance?: number; // Remaining liquid Innovation Credits
-  brownie_points?: number; // Brownie points (recorded separately from Innovation Credits)
+  // Legacy fields for backward compatibility
+  ic_starting?: number;
+  ic_stock_trades?: number;
+  ic_auction_spent?: number;
+  ic_r5_wager?: number;
+  ic_r5_result?: 'won' | 'lost' | 'none';
+  ic_balance?: number;
+  brownie_points?: number; // Brownie points
 
   judge_notes?: string;
   assigned_problem_statement?: ProblemStatement;
