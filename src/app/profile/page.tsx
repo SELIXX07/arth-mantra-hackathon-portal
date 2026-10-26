@@ -528,8 +528,7 @@ export default function ProfilePage() {
                       )}
 
                       {/* ASSIGNED PROBLEM STATEMENT (CONFIDENTIAL - ONLY VIEWABLE ONCE REVEALED BY ADMIN) */}
-                      {registration.status === 'approved' && (
-                        Boolean(hackathon?.ps_released) ? (
+                      {registration.status === 'approved' && Boolean(hackathon?.ps_released) && (
                           registration.assigned_problem_statement ? (
                             <div className="bg-gradient-to-br from-[#0C1222] via-[#0E162A] to-[#0A1020] border-2 border-indigo-500/50 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(99,102,241,0.2)] space-y-4">
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-indigo-900/50">
@@ -631,31 +630,11 @@ export default function ProfilePage() {
                               </span>
                             </div>
                           )
-                        ) : (
-                          <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                                <Lock className="w-4 h-4 text-indigo-400" />
-                              </div>
-                              <div>
-                                <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                                  Round 1: Problem Statement Briefing
-                                </div>
-                                <div className="text-[11px] text-slate-400 font-sans">
-                                  Problem statements have not been revealed yet. Once unlocked by the organizing committee, your squad&apos;s briefing will appear here.
-                                </div>
-                              </div>
-                            </div>
-                            <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
-                              Concealed by Admin
-                            </span>
-                          </div>
-                        )
+
                       )}
 
                       {/* ASSIGNED DATASHEET (EXCEL/CSV - CONFIDENTIAL - ONLY VIEWABLE ONCE REVEALED BY ADMIN) */}
-                      {registration.status === 'approved' && (
-                        Boolean(hackathon?.datasheets_released) ? (
+                      {registration.status === 'approved' && Boolean(hackathon?.datasheets_released) && (
                           registration.assigned_datasheet ? (
                             <div className="bg-gradient-to-br from-[#071915] via-[#0A1F1B] to-[#081512] border-2 border-emerald-500/60 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(16,185,129,0.2)] space-y-4">
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-emerald-900/50">
@@ -734,26 +713,7 @@ export default function ProfilePage() {
                               </span>
                             </div>
                           )
-                        ) : (
-                          <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                                <Lock className="w-4 h-4 text-emerald-400" />
-                              </div>
-                              <div>
-                                <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                                  Round 2: Financial & Operational Datasheets
-                                </div>
-                                <div className="text-[11px] text-slate-400 font-sans">
-                                  Financial spreadsheets and operating data will be unlocked and downloadable here once released by the admins.
-                                </div>
-                              </div>
-                            </div>
-                            <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
-                              Concealed by Admin
-                            </span>
-                          </div>
-                        )
+
                       )}
 
                       {/* Round 3: Stock Market Trading Portal (ONLY POPS UP ONCE ADMIN RELEASES CREDENTIALS) */}
@@ -861,35 +821,13 @@ export default function ProfilePage() {
                           );
                         }
 
-                        if (registration.status === 'approved' && !isCredentialsUnlocked) {
-                          return (
-                            <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                                  <Lock className="w-4 h-4 text-cyan-400" />
-                                </div>
-                                <div>
-                                  <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                                    Round 3: Stock Market Simulation
-                                  </div>
-                                  <div className="text-[11px] text-slate-400 font-sans">
-                                    Team login codes will be unlocked and displayed here once released by the market coordinators.
-                                  </div>
-                                </div>
-                              </div>
-                              <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
-                                Credentials Locked
-                              </span>
-                            </div>
-                          );
-                        }
+
 
                         return null;
                       })()}
 
                       {/* ROUND 4: THE RESOURCE AUCTION SHEET (OFFICIAL MASTER INVENTORY) */}
-                      {registration.status === 'approved' && (
-                        Boolean(hackathon?.auction_released) ? (
+                      {registration.status === 'approved' && Boolean(hackathon?.auction_released) && (
                           (hackathon?.auction_sheet || (registration as any).assigned_auction_sheet) ? (
                             <div className="bg-gradient-to-br from-[#180D2E] via-[#140B26] to-[#0A0718] border-2 border-purple-500/70 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(168,85,247,0.25)] space-y-4">
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-purple-900/50">
@@ -968,26 +906,7 @@ export default function ProfilePage() {
                               </span>
                             </div>
                           )
-                        ) : (
-                          <div className="bg-[#080E1C]/90 border border-slate-800 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                                <Lock className="w-4 h-4 text-purple-400" />
-                              </div>
-                              <div>
-                                <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                                  Round 4: Resource Auction Sheet
-                                </div>
-                                <div className="text-[11px] text-slate-400 font-sans">
-                                  The official auction sheet and asset catalog will be released here once Round 4 begins.
-                                </div>
-                              </div>
-                            </div>
-                            <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-500 shrink-0">
-                              Concealed by Admin
-                            </span>
-                          </div>
-                        )
+
                       )}
 
                       {/* Live Scorecard (if approved) */}
