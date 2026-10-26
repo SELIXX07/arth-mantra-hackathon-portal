@@ -330,6 +330,12 @@ export default function AdminDashboardPage() {
   const [isResettingUserPass, setIsResettingUserPass] = useState(false)
   const [copiedResetPass, setCopiedResetPass] = useState(false)
 
+  // Database Restore & Redundancy State
+  const [showPortalRestoreModal, setShowPortalRestoreModal] = useState(false)
+  const [isRestoringPortal, setIsRestoringPortal] = useState(false)
+  const [portalRestoreFile, setPortalRestoreFile] = useState<File | null>(null)
+  const [portalRestoreError, setPortalRestoreError] = useState<string | null>(null)
+
   // Direct Role Change State
   const [directChangeEmail, setDirectChangeEmail] = useState('')
   const [directChangeRole, setDirectChangeRole] = useState<UserRole>('admin')
@@ -1347,6 +1353,37 @@ export default function AdminDashboardPage() {
     }
   }
 
+  // JSON backup restore
+  const handleExecutePortalRestore = async () => {
+    if (!portalRestoreFile) {
+      setPortalRestoreError('Please select a valid .json backup file.')
+      return
+    }
+    setIsRestoringPortal(true)
+    setPortalRestoreError(null)
+    try {
+      const text = await portalRestoreFile.text()
+      const parsed = JSON.parse(text)
+      const res = await fetch('/api/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed)
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to restore database.')
+      }
+      showToast(data.message || 'Database restored successfully!', 'success')
+      setShowPortalRestoreModal(false)
+      setPortalRestoreFile(null)
+      loadData(false)
+    } catch (err: any) {
+      setPortalRestoreError(err?.message || 'Restore error occurred')
+    } finally {
+      setIsRestoringPortal(false)
+    }
+  }
+
   // Guard: Unauthorized
   if (authLoading) {
     return (
@@ -1792,6 +1829,17 @@ export default function AdminDashboardPage() {
                     className="py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
                   >
                     <Download className="w-4 h-4" /> Backup JSON
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPortalRestoreError(null)
+                      setPortalRestoreFile(null)
+                      setShowPortalRestoreModal(true)
+                    }}
+                    className="py-2 px-3.5 rounded-xl bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-800/80 font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    title="Restore system database from a JSON backup file"
+                  >
+                    <Database className="w-4 h-4 text-amber-400" /> Restore JSON
                   </button>
                 </div>
               </div>
@@ -4456,6 +4504,85 @@ export default function AdminDashboardPage() {
                 >
                   Done
                 </button>
+              </motion.div>
+            </div>
+          )}
+
+          {/* Database Restore Modal */}
+          {showPortalRestoreModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-[#0C1222] border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative"
+              >
+                <button
+                  onClick={() => setShowPortalRestoreModal(false)}
+                  className="absolute top-4 right-4 text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-white">Restore Hackathon Database</h3>
+                    <p className="text-xs text-slate-400">Recover registrations, teams, and scores from a JSON snapshot.</p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-800/60 text-xs text-amber-300 font-mono space-y-1 mb-4">
+                  <p className="font-bold">⚠️ Warning & Safeguards:</p>
+                  <p>Restoring will upsert team registrations, member rosters, and evaluations from the selected backup file into the Supabase database.</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs uppercase tracking-wider text-slate-300 font-bold mb-1.5">
+                      Select Backup File (.json)
+                    </label>
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setPortalRestoreFile(e.target.files[0])
+                          setPortalRestoreError(null)
+                        }
+                      }}
+                      className="w-full bg-[#080E1C] border border-slate-700 rounded-xl p-2.5 text-xs text-slate-300 font-mono file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-500 cursor-pointer"
+                    />
+                  </div>
+
+                  {portalRestoreError && (
+                    <div className="p-3 bg-rose-950/80 border border-rose-800 rounded-xl text-rose-300 text-xs font-mono">
+                      {portalRestoreError}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPortalRestoreModal(false)}
+                      disabled={isRestoringPortal}
+                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExecutePortalRestore}
+                      disabled={isRestoringPortal || !portalRestoreFile}
+                      className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-amber-900/30 flex items-center gap-1.5"
+                    >
+                      {isRestoringPortal && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                      <span>{isRestoringPortal ? 'Restoring System...' : 'Confirm & Restore'}</span>
+                    </button>
+                  </div>
+                </div>
               </motion.div>
             </div>
           )}
