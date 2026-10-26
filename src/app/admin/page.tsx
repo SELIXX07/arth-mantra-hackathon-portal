@@ -818,20 +818,9 @@ export default function AdminDashboardPage() {
   const handleOpenPSModal = (team: TeamRegistration) => {
     setPsModalTeam(team)
     if (team.assigned_problem_statement) {
-      setPsTitle(team.assigned_problem_statement.title || '')
-      setPsTrack(team.assigned_problem_statement.track || '')
-      setPsDescription(team.assigned_problem_statement.description || '')
-      setPsDeliverables(team.assigned_problem_statement.deliverables || '')
-      setPsResources(team.assigned_problem_statement.resources || '')
       setPsPdfUrl(team.assigned_problem_statement.pdf_url || '')
       setPsPdfName(team.assigned_problem_statement.pdf_name || '')
     } else {
-      const preset = ARTH_MANTRA_PS_PRESETS[0]
-      setPsTitle(preset.title)
-      setPsTrack(preset.track)
-      setPsDescription(preset.description)
-      setPsDeliverables(preset.deliverables || '')
-      setPsResources(preset.resources || '')
       setPsPdfUrl('')
       setPsPdfName('')
     }
@@ -881,21 +870,19 @@ export default function AdminDashboardPage() {
   const handleSavePS = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!psModalTeam) return
-    if (!psTitle.trim() || !psTrack.trim() || !psDescription.trim()) {
-      showToast('Please provide a title, track domain, and briefing.', 'warning')
+    if (!psPdfUrl) {
+      showToast('Please upload a Problem Statement PDF first.', 'warning')
       return
     }
 
     setIsSubmittingPS(true)
     try {
       const psPayload: ProblemStatement = {
-        title: psTitle.trim(),
-        track: psTrack.trim(),
-        description: psDescription.trim(),
-        deliverables: psDeliverables.trim() || undefined,
-        resources: psResources.trim() || undefined,
-        pdf_url: psPdfUrl.trim() || undefined,
-        pdf_name: psPdfName.trim() || undefined,
+        title: psPdfName || 'Official Problem Statement Briefing',
+        track: 'Problem Statement Track',
+        description: 'Official Problem Statement document assigned exclusively to your squad. Download the attached PDF briefing below to review your case.',
+        pdf_url: psPdfUrl.trim(),
+        pdf_name: psPdfName.trim() || 'Problem_Statement.pdf',
         assigned_at: new Date().toISOString()
       }
 
@@ -905,7 +892,7 @@ export default function AdminDashboardPage() {
           prev.map(r => r.id === psModalTeam.id ? { ...r, assigned_problem_statement: psPayload } : r)
         )
       }
-      showToast(`Problem Statement assigned to "${psModalTeam.team_name}"!`, 'success')
+      showToast(`Problem Statement PDF assigned to "${psModalTeam.team_name}"!`, 'success')
       setPsModalTeam(null)
       await loadData(true)
     } catch (err: any) {
@@ -4246,7 +4233,7 @@ export default function AdminDashboardPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[#0C1427] max-w-2xl w-full rounded-3xl p-5 sm:p-7 border border-indigo-500/50 shadow-[0_0_40px_rgba(99,102,241,0.25)] relative my-8"
+                className="bg-[#0C1427] max-w-xl w-full rounded-3xl p-5 sm:p-7 border border-indigo-500/50 shadow-[0_0_40px_rgba(99,102,241,0.25)] relative my-8"
               >
                 <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
                   <div className="flex items-center gap-2.5">
@@ -4258,7 +4245,7 @@ export default function AdminDashboardPage() {
                         Assign Problem Statement: {psModalTeam.team_name}
                       </span>
                       <span className="text-[10px] text-slate-400 font-mono">
-                        Confidential Briefing • Strictly visible only to this team
+                        Round 1 Brief • Upload Problem Statement PDF (.pdf) for this squad
                       </span>
                     </div>
                   </div>
@@ -4271,124 +4258,57 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <form onSubmit={handleSavePS} className="space-y-4">
-                  {/* Preset Quick Selection */}
-                  <div className="bg-[#080E1C] p-3.5 rounded-2xl border border-slate-800 space-y-1.5">
-                    <label className="text-[11px] font-bold text-[#00D2FF] uppercase font-mono block">
-                      Choose from Arth Mantra Pre-Configured Tracks:
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {ARTH_MANTRA_PS_PRESETS.map((p, idx) => (
-                        <button
-                          key={p.track}
-                          type="button"
-                          onClick={() => handleSelectPSPreset(idx)}
-                          className={`p-2.5 text-left rounded-xl border text-xs transition-all font-mono ${
-                            psTrack === p.track
-                              ? 'bg-indigo-950/80 border-indigo-500 text-indigo-200 font-bold shadow-md'
-                              : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                          }`}
-                        >
-                          <div className="font-bold text-[11px] text-white truncate">{p.track}</div>
-                          <div className="text-[10px] text-slate-400 truncate">{p.title}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
-                    <div>
-                      <label className="font-bold text-slate-300 block mb-1">Track / Domain *</label>
-                      <input
-                        type="text"
-                        value={psTrack}
-                        onChange={e => setPsTrack(e.target.value)}
-                        placeholder="e.g. Algorithmic Trading & Arbitrage"
-                        required
-                        className="w-full p-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-white focus:outline-none focus:border-indigo-400 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-300 block mb-1">Problem Title *</label>
-                      <input
-                        type="text"
-                        value={psTitle}
-                        onChange={e => setPsTitle(e.target.value)}
-                        placeholder="e.g. High-Frequency Cross-Venue Arbitrage"
-                        required
-                        className="w-full p-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-white focus:outline-none focus:border-indigo-400 text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-300 block mb-1 text-xs font-mono">
-                      Detailed Briefing & Problem Description *
-                    </label>
-                    <textarea
-                      value={psDescription}
-                      onChange={e => setPsDescription(e.target.value)}
-                      placeholder="Enter the full problem briefing, challenge context, and constraints..."
-                      rows={4}
-                      required
-                      className="w-full p-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-white focus:outline-none focus:border-indigo-400 text-xs leading-relaxed"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-300 block mb-1 text-xs font-mono">
-                      Key Deliverables Expected (One per line)
-                    </label>
-                    <textarea
-                      value={psDeliverables}
-                      onChange={e => setPsDeliverables(e.target.value)}
-                      placeholder="1. Mathematical model / DCF valuation&#10;2. Risk-management execution rules&#10;3. Final executive slide deck"
-                      rows={3}
-                      className="w-full p-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-white focus:outline-none focus:border-indigo-400 text-xs leading-relaxed font-mono"
-                    />
-                  </div>
-
                   {/* Upload PDF Section */}
-                  <div className="bg-[#080E1C] p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                  <div className="bg-[#080E1C] p-4 rounded-2xl border border-slate-800 space-y-2.5">
                     <label className="text-xs font-mono font-bold text-slate-300 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-indigo-400" /> Upload Problem Statement PDF (Recommended)
+                        <FileText className="w-4 h-4 text-indigo-400" /> Problem Statement PDF Document (.pdf) *
                       </span>
                       {psPdfUploading && <span className="text-indigo-400 text-[10px] animate-pulse">Uploading PDF...</span>}
                     </label>
 
                     {psPdfUrl ? (
-                      <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-700/60 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 truncate">
-                          <FileText className="w-4 h-4 text-indigo-400 shrink-0" />
-                          <span className="text-xs font-mono text-indigo-200 truncate">{psPdfName || 'Problem_Statement.pdf'}</span>
+                      <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-700/60 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 truncate">
+                          <FileText className="w-6 h-6 text-indigo-400 shrink-0" />
+                          <div className="truncate">
+                            <span className="text-xs font-mono font-bold text-indigo-200 block truncate">
+                              {psPdfName || 'Problem_Statement.pdf'}
+                            </span>
+                            <span className="text-[10px] text-indigo-400/80 font-mono">
+                              PDF ready for team assignment
+                            </span>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <a
                             href={psPdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1 rounded-lg text-cyan-400 hover:text-cyan-300 text-xs font-mono hover:underline flex items-center gap-1"
+                            className="py-1.5 px-3 rounded-lg bg-indigo-900/60 text-indigo-300 hover:text-white text-xs font-mono hover:bg-indigo-800/60 flex items-center gap-1.5 transition-all"
                           >
-                            <ExternalLink className="w-3.5 h-3.5" /> View
+                            <Download className="w-3.5 h-3.5" /> Preview PDF
                           </a>
                           <button
                             type="button"
                             onClick={() => { setPsPdfUrl(''); setPsPdfName(''); }}
-                            className="p-1 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-950/60 cursor-pointer"
-                            title="Remove PDF"
+                            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-950/60 transition-all cursor-pointer"
+                            title="Replace / Remove PDF"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <label className="flex flex-col items-center justify-center p-4 border border-dashed border-slate-700 hover:border-indigo-500 rounded-xl bg-slate-900/40 cursor-pointer transition-colors group">
-                        <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 mb-1 transition-colors" />
-                        <span className="text-xs font-mono text-slate-300 group-hover:text-white">
-                          Click to browse and upload Problem Statement PDF (.pdf)
+                      <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-2xl bg-slate-900/40 cursor-pointer transition-colors group">
+                        <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform mb-3">
+                          <Upload className="w-6 h-6" />
+                        </div>
+                        <span className="text-sm font-mono font-bold text-slate-200 group-hover:text-white">
+                          Click to select and upload Problem Statement PDF (.pdf)
                         </span>
-                        <span className="text-[10px] text-slate-500 mt-0.5">
-                          PDF will be assigned exclusively to this team & downloadable once revealed
+                        <span className="text-[11px] text-slate-400 mt-1">
+                          PDF will be assigned exclusively to this squad and downloadable once revealed
                         </span>
                         <input
                           type="file"
@@ -4401,23 +4321,10 @@ export default function AdminDashboardPage() {
                     )}
                   </div>
 
-                  <div>
-                    <label className="font-bold text-slate-300 block mb-1 text-xs font-mono">
-                      Resource Link / Drive / Reference Material URL (Optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={psResources}
-                      onChange={e => setPsResources(e.target.value)}
-                      placeholder="https://pes.edu/arth-mantra/resources/ps-track-1.pdf"
-                      className="w-full p-2.5 rounded-xl border border-slate-800 bg-[#080E1C] text-white focus:outline-none focus:border-indigo-400 text-xs font-mono"
-                    />
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-800/60 text-[11px] text-indigo-300 font-mono flex items-center gap-2">
+                  <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/60 text-[11px] text-indigo-300 font-mono flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
                     <span>
-                      <strong>Concealed by Default:</strong> Assigning saves this problem statement for {psModalTeam.team_name}. It will only become visible to them once &quot;Reveal All PS&quot; is activated.
+                      <strong>Concealed by Default:</strong> Assigning saves this PDF for {psModalTeam.team_name}. It will only become visible and downloadable on their profile once &quot;Reveal All PS&quot; is activated.
                     </span>
                   </div>
 
@@ -4443,10 +4350,10 @@ export default function AdminDashboardPage() {
                       </button>
                       <button
                         type="submit"
-                        disabled={isSubmittingPS}
+                        disabled={isSubmittingPS || !psPdfUrl}
                         className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(99,102,241,0.3)] cursor-pointer disabled:opacity-50"
                       >
-                        {isSubmittingPS ? 'Saving...' : 'Assign PS to Team'}
+                        {isSubmittingPS ? 'Saving...' : 'Assign PDF to Team'}
                       </button>
                     </div>
                   </div>

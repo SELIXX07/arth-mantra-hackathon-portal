@@ -843,6 +843,19 @@ export default function RegisterTeamPage() {
                 <p className="text-xs text-slate-400">Upload a screenshot showing the transaction amount & reference.</p>
               </div>
 
+              {/* PESU Portal Payment Instructions */}
+              <div className="bg-[#080E1C] border border-amber-500/40 rounded-2xl p-4 sm:p-5 space-y-2.5">
+                <span className="text-xs font-black uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-amber-400" /> Payment Instructions:
+                </span>
+                <ol className="list-decimal list-inside space-y-2 text-xs text-slate-200 font-mono leading-relaxed pl-1">
+                  <li><span className="text-white font-bold">login in your PESU portal</span> <span className="text-amber-300 font-semibold">(only 1 student should pay)</span></li>
+                  <li><span className="text-white font-bold">Online payments</span></li>
+                  <li><span className="text-white font-bold">Miscellaneous Fees</span></li>
+                  <li><span className="text-white font-bold">Select ARTHMANTRA as Category and sub-category</span></li>
+                </ol>
+              </div>
+
               {/* Dropzone */}
               <div className="relative border-2 border-dashed border-slate-700 hover:border-[#00D2FF] rounded-2xl p-6 sm:p-8 transition-colors bg-[#080E1C] flex flex-col items-center justify-center text-center cursor-pointer group">
                 <input
