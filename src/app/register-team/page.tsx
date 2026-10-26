@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Compass, ArrowRight, ArrowLeft, Upload, CheckCircle2, AlertCircle,
-  Check, Clock, User, Phone, Mail, GraduationCap, Plus, X, Users,
+  Check, Clock, User, Phone, Mail, GraduationCap, Users,
   DollarSign, Sparkles, BookOpen, Layers, Bookmark, Building2,
   Scale, ChevronDown, ChevronUp, ShieldCheck, Award, FileText
 } from 'lucide-react'
@@ -48,7 +48,11 @@ export default function RegisterTeamPage() {
   // Step 1 state
   const [teamName, setTeamName] = useState('')
   const [additionalMembers, setAdditionalMembers] = useState<MemberForm[]>([
-    emptyMember(), emptyMember(), emptyMember()
+    emptyMember(), // Member 2
+    emptyMember(), // Member 3
+    emptyMember(), // Member 4
+    emptyMember(), // Member 5 (Optional)
+    emptyMember()  // Member 6 (Optional)
   ])
   const [agreedToRules, setAgreedToRules] = useState(false)
   const [showFullRules, setShowFullRules] = useState(false)
@@ -96,18 +100,6 @@ export default function RegisterTeamPage() {
     reader.readAsDataURL(file)
   }
 
-  const addMember = () => {
-    if (additionalMembers.length < 5) {
-      setAdditionalMembers(prev => [...prev, emptyMember()])
-    }
-  }
-
-  const removeMember = (idx: number) => {
-    if (additionalMembers.length > 3) {
-      setAdditionalMembers(prev => prev.filter((_, i) => i !== idx))
-    }
-  }
-
   const updateMember = (idx: number, field: keyof MemberForm, value: string) => {
     setAdditionalMembers(prev => {
       const updated = [...prev]
@@ -122,19 +114,32 @@ export default function RegisterTeamPage() {
       showToast('Please enter a team name.', 'warning')
       return
     }
-    if (additionalMembers.length < 3) {
-      showToast('You need at least 3 additional members (minimum 4 total).', 'warning')
-      return
-    }
-    for (let i = 0; i < additionalMembers.length; i++) {
+    // Validate required members (Member 2, Member 3, Member 4)
+    for (let i = 0; i < 3; i++) {
       const m = additionalMembers[i]
-      if (!m.name.trim() || !m.srn.trim() || !m.phone.trim() || !m.email.trim()) {
+      if (!m || !m.name.trim() || !m.srn.trim() || !m.phone.trim() || !m.email.trim()) {
         showToast(`Please fill in all details for Member ${i + 2}.`, 'warning')
         return
       }
       if (!m.department || !m.semester || !m.section) {
         showToast(`Please select Department, Semester, and Section for Member ${i + 2}.`, 'warning')
         return
+      }
+    }
+    // Validate optional members (Member 5 and Member 6)
+    for (let i = 3; i < additionalMembers.length; i++) {
+      const m = additionalMembers[i]
+      if (!m) continue
+      const hasAny = m.name.trim() || m.srn.trim() || m.phone.trim() || m.email.trim() || m.department || m.semester || m.section
+      if (hasAny) {
+        if (!m.name.trim() || !m.srn.trim() || !m.phone.trim() || !m.email.trim()) {
+          showToast(`Please complete all details for Member ${i + 2} (Optional) or clear the card if not adding them.`, 'warning')
+          return
+        }
+        if (!m.department || !m.semester || !m.section) {
+          showToast(`Please select Department, Semester, and Section for Member ${i + 2} (Optional).`, 'warning')
+          return
+        }
       }
     }
     if (!agreedToRules) {
@@ -184,7 +189,8 @@ export default function RegisterTeamPage() {
         section: user.section,
         residence_type: user.residence_type || 'Non-Hostelite'
       }
-      const members: TeamMember[] = [leaderMember, ...additionalMembers]
+      const filledAdditional = additionalMembers.filter(m => m.name.trim() && m.srn.trim())
+      const members: TeamMember[] = [leaderMember, ...filledAdditional]
 
       const newReg = await LocalDB.addRegistration({
         hackathon_id: hackathon.id,
@@ -411,93 +417,86 @@ export default function RegisterTeamPage() {
                 </div>
               </div>
 
-              {/* Additional Members */}
+              {/* Squad Members */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h3 className="text-sm font-bold text-white">Additional Team Members</h3>
+                    <h3 className="text-sm font-bold text-white">Squad Members</h3>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      {additionalMembers.length} / 5 additional members (minimum 3 required)
+                      Members 2, 3, and 4 are required (minimum 4 squad members). Member 5 and Member 6 are optional.
                     </p>
                   </div>
-                  {additionalMembers.length < 5 && (
-                    <button
-                      type="button"
-                      onClick={addMember}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-950/60 border border-cyan-800 text-[#00D2FF] text-xs font-bold hover:bg-cyan-900/40 transition-all cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Add Member
-                    </button>
-                  )}
                 </div>
 
                 <div className="space-y-3.5">
-                  <AnimatePresence>
-                    {additionalMembers.map((member, idx) => (
-                      <motion.div
+                  {additionalMembers.map((member, idx) => {
+                    const isOptional = idx >= 3 // idx 3 is Member 5, idx 4 is Member 6
+                    const memberNum = idx + 2
+
+                    return (
+                      <div
                         key={idx}
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-[#080E1C] rounded-2xl p-4 border border-slate-800 relative"
+                        className={`bg-[#080E1C] rounded-2xl p-4 border transition-colors ${
+                          isOptional ? 'border-slate-800/80 hover:border-amber-500/30' : 'border-slate-800'
+                        }`}
                       >
                         <div className="flex items-center justify-between mb-2.5">
-                          <span className="text-xs font-black text-[#00D2FF] uppercase tracking-wider">
-                            Member {idx + 2}
+                          <span className={`text-xs font-black uppercase tracking-wider ${
+                            isOptional ? 'text-amber-400' : 'text-[#00D2FF]'
+                          }`}>
+                            Member {memberNum} {isOptional ? '(Optional)' : ''}
                           </span>
-                          {additionalMembers.length > 3 && (
-                            <button
-                              type="button"
-                              onClick={() => removeMember(idx)}
-                              className="w-6 h-6 flex items-center justify-center rounded-lg bg-rose-950/50 border border-rose-800 text-rose-400 hover:bg-rose-900 transition-all cursor-pointer"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded font-black ${
+                            isOptional
+                              ? 'bg-amber-950/40 text-amber-300 border border-amber-800/60'
+                              : 'bg-cyan-950/80 text-[#00D2FF] border border-cyan-800/80'
+                          }`}>
+                            {isOptional ? 'Optional' : 'Required'}
+                          </span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <input
                             type="text"
-                            required
+                            required={!isOptional}
                             value={member.name}
                             onChange={e => updateMember(idx, 'name', e.target.value)}
-                            placeholder="Full Name *"
+                            placeholder={isOptional ? "Full Name (Optional)" : "Full Name *"}
                             className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none"
                           />
                           <input
                             type="text"
-                            required
+                            required={!isOptional}
                             value={member.srn}
                             onChange={e => updateMember(idx, 'srn', e.target.value)}
-                            placeholder="SRN / Roll No *"
+                            placeholder={isOptional ? "SRN / Roll No (Optional)" : "SRN / Roll No *"}
                             className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none font-mono uppercase"
                           />
                           <input
                             type="tel"
-                            required
+                            required={!isOptional}
                             maxLength={10}
                             value={member.phone}
                             onChange={e => updateMember(idx, 'phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                            placeholder="Phone Number *"
+                            placeholder={isOptional ? "Phone Number (Optional)" : "Phone Number *"}
                             className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none font-mono"
                           />
                           <input
                             type="email"
-                            required
+                            required={!isOptional}
                             value={member.email}
                             onChange={e => updateMember(idx, 'email', e.target.value)}
-                            placeholder="Email Address *"
+                            placeholder={isOptional ? "Email Address (Optional)" : "Email Address *"}
                             className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none"
                           />
                           <div className="sm:col-span-2">
                             <select
-                              required
+                              required={!isOptional}
                               value={member.department || ''}
                               onChange={e => updateMember(idx, 'department', e.target.value)}
                               className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
                             >
                               <option value="" disabled className="bg-[#0C1222] text-slate-500">
-                                -- Select Department / Course * --
+                                {isOptional ? "-- Select Department / Course (Optional) --" : "-- Select Department / Course * --"}
                               </option>
                               {PES_DEPARTMENTS.map(dept => (
                                 <option key={dept} value={dept} className="bg-[#0C1222] text-white">
@@ -508,13 +507,13 @@ export default function RegisterTeamPage() {
                           </div>
                           <div>
                             <select
-                              required
+                              required={!isOptional}
                               value={member.semester || ''}
                               onChange={e => updateMember(idx, 'semester', e.target.value)}
                               className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer font-bold"
                             >
                               <option value="" disabled className="bg-[#0C1222] text-slate-500">
-                                -- Semester (1 to 7) * --
+                                {isOptional ? "-- Semester (Optional) --" : "-- Semester (1 to 7) * --"}
                               </option>
                               {SEMESTER_OPTIONS.map(sem => (
                                 <option key={sem} value={sem} className="bg-[#0C1222] text-white">
@@ -525,13 +524,13 @@ export default function RegisterTeamPage() {
                           </div>
                           <div>
                             <select
-                              required
+                              required={!isOptional}
                               value={member.section || ''}
                               onChange={e => updateMember(idx, 'section', e.target.value)}
                               className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer font-bold"
                             >
                               <option value="" disabled className="bg-[#0C1222] text-slate-500">
-                                -- Section (A to G) * --
+                                {isOptional ? "-- Section (Optional) --" : "-- Section (A to G) * --"}
                               </option>
                               {SECTION_OPTIONS.map(sec => (
                                 <option key={sec} value={sec} className="bg-[#0C1222] text-white">
@@ -542,7 +541,6 @@ export default function RegisterTeamPage() {
                           </div>
                           <div className="sm:col-span-2">
                             <select
-                              required
                               value={member.residence_type || 'Non-Hostelite'}
                               onChange={e => updateMember(idx, 'residence_type', e.target.value)}
                               className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer font-bold"
@@ -556,9 +554,9 @@ export default function RegisterTeamPage() {
                             </select>
                           </div>
                         </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
 
