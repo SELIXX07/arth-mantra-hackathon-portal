@@ -12,36 +12,43 @@ import { LocalDB, exportLeaderboardToExcel } from '@/lib/storage'
 import { TeamRegistration, Hackathon } from '@/types'
 import { useAuth } from '@/components/AuthProvider'
 
-// Helper to extract the leader's real name cleanly (never showing raw email)
+// Helper to extract the leader's real name cleanly (guaranteed NEVER to show raw email)
 function getLeaderName(team: TeamRegistration): string {
   if (!team) return 'Squad Leader'
-  const members = Array.isArray(team.members) ? team.members : []
 
-  // 1. Match member whose email matches leader_email
-  if (team.leader_email) {
+  // 1. Check direct leader_name property if valid non-email string
+  const directName = (team as any).leader_name
+  if (directName && typeof directName === 'string' && directName.trim() && !directName.includes('@')) {
+    return directName.trim()
+  }
+
+  const members = Array.isArray(team.members)
+    ? team.members
+    : (typeof (team as any).members === 'string' ? (() => { try { return JSON.parse((team as any).members) } catch { return [] } })() : [])
+
+  // 2. Match member whose email matches leader_email
+  if (team.leader_email && Array.isArray(members)) {
     const matched = members.find(
       m => m?.email && m.email.trim().toLowerCase() === team.leader_email.trim().toLowerCase()
     )
-    if (matched?.name && matched.name.trim()) return matched.name.trim()
+    if (matched?.name && typeof matched.name === 'string' && matched.name.trim() && !matched.name.includes('@')) {
+      return matched.name.trim()
+    }
   }
 
-  // 2. Member 0 is the designated leader by schema
-  if (members[0]?.name && members[0].name.trim()) {
+  // 3. Member 0 is the designated leader by schema
+  if (Array.isArray(members) && members[0]?.name && typeof members[0].name === 'string' && members[0].name.trim() && !members[0].name.includes('@')) {
     return members[0].name.trim()
   }
 
-  // 3. Direct leader_name property if present
-  if ((team as any).leader_name && (team as any).leader_name.trim()) {
-    return (team as any).leader_name.trim()
-  }
-
-  // 4. Fallback to clean capitalized username from email
-  if (team.leader_email) {
+  // 4. Fallback to clean capitalized words from username prefix
+  if (team.leader_email && typeof team.leader_email === 'string') {
     const raw = team.leader_email.split('@')[0].replace(/[._0-9]/g, ' ').trim()
     if (raw) {
       return raw
         .split(' ')
-        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
         .join(' ')
     }
   }

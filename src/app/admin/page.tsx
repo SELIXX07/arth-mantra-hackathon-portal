@@ -56,6 +56,41 @@ export const ARTH_MANTRA_PS_PRESETS: ProblemStatement[] = [
   }
 ]
 
+function getAdminLeaderName(reg: any): string {
+  if (!reg) return 'Team Leader'
+  if (reg.leader_name && typeof reg.leader_name === 'string' && reg.leader_name.trim()) {
+    return reg.leader_name.trim()
+  }
+  let mems: any[] = []
+  try {
+    mems = Array.isArray(reg.members)
+      ? reg.members
+      : (typeof reg.members === 'string' ? JSON.parse(reg.members) : [])
+  } catch {
+    mems = []
+  }
+  if (Array.isArray(mems) && mems.length > 0) {
+    if (reg.leader_email) {
+      const match = mems.find(
+        (m: any) => m?.email && m.email.trim().toLowerCase() === reg.leader_email.trim().toLowerCase()
+      )
+      if (match?.name && typeof match.name === 'string' && match.name.trim()) return match.name.trim()
+    }
+    if (mems[0]?.name && typeof mems[0].name === 'string' && mems[0].name.trim()) return mems[0].name.trim()
+  }
+  if (reg.leader_email && typeof reg.leader_email === 'string') {
+    const raw = reg.leader_email.split('@')[0].replace(/[._0-9]/g, ' ').trim()
+    if (raw) {
+      return raw
+        .split(' ')
+        .filter(Boolean)
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ')
+    }
+  }
+  return 'Team Leader'
+}
+
 export default function AdminDashboardPage() {
   const { user, isAdmin, isDev, isMarketAdmin, loading: authLoading } = useAuth()
   const { showToast } = useToast()
@@ -2166,7 +2201,7 @@ export default function AdminDashboardPage() {
                             )}
                           </div>
                           <div className="text-xs text-slate-400 flex flex-wrap items-center gap-y-1 gap-x-3">
-                            <span>Leader: <strong className="text-slate-200">{reg.leader_email}</strong></span>
+                            <span>Leader: <strong className="text-slate-200 font-semibold">{getAdminLeaderName(reg)}</strong> <span className="text-[11px] text-slate-500 font-mono">({reg.leader_email})</span></span>
                             <span>•</span>
                             <span>{reg.members?.length || 0} members</span>
                             <span>•</span>
@@ -2901,7 +2936,7 @@ export default function AdminDashboardPage() {
                             <span className="text-[10px] text-slate-400">({team.members?.length} members)</span>
                           </div>
                           <div className="text-xs text-slate-300">
-                            Leader: <strong className="text-white font-semibold">{team.members?.find(m => m?.email && team.leader_email && m.email.toLowerCase() === team.leader_email.toLowerCase())?.name || team.members?.[0]?.name || team.leader_email}</strong>
+                            Leader: <strong className="text-white font-semibold">{getAdminLeaderName(team)}</strong>
                           </div>
                           {team.judge_notes && (
                             <div className="text-xs text-amber-300/80 italic mt-0.5">
@@ -3207,7 +3242,7 @@ export default function AdminDashboardPage() {
                                   <div>
                                     <div className="font-bold text-white text-[11px]">{r.team_name}</div>
                                     <div className="text-[10px] text-slate-400">
-                                      {r.members?.length} members • Leader: <strong className="text-slate-200">{r.members?.find(m => m?.email && r.leader_email && m.email.toLowerCase() === r.leader_email.toLowerCase())?.name || r.members?.[0]?.name || r.leader_email}</strong>
+                                      {r.members?.length} members • Leader: <strong className="text-slate-200">{getAdminLeaderName(r)}</strong>
                                     </div>
                                   </div>
                                   <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${
@@ -3527,7 +3562,7 @@ export default function AdminDashboardPage() {
                       <th className="py-2.5 px-3">Team Name</th>
                       <th className="py-2.5 px-3">Team Code</th>
                       <th className="py-2.5 px-3">Trader PIN</th>
-                      <th className="py-2.5 px-3">Leader Email</th>
+                      <th className="py-2.5 px-3">Leader</th>
                       <th className="py-2.5 px-3 text-right">Status</th>
                     </tr>
                   </thead>
@@ -3543,7 +3578,10 @@ export default function AdminDashboardPage() {
                             <td className="py-2.5 px-3 font-bold text-white">{reg.team_name}</td>
                             <td className="py-2.5 px-3 font-bold text-cyan-400">{teamCode}</td>
                             <td className="py-2.5 px-3 text-slate-300">{pin}</td>
-                            <td className="py-2.5 px-3 text-slate-400">{reg.leader_email}</td>
+                            <td className="py-2.5 px-3 text-slate-300">
+                              <div className="font-semibold text-white">{getAdminLeaderName(reg)}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">{reg.leader_email}</div>
+                            </td>
                             <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">Authorized</td>
                           </tr>
                         )

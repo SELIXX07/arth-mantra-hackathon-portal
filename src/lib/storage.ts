@@ -438,8 +438,9 @@ export const LocalDB = {
         if (res.ok) {
           const json = await res.json()
           if (json.success && Array.isArray(json.registrations)) {
-            this.saveRegistrations(json.registrations)
-            return json.registrations
+            const parsed = json.registrations.map(parseRegistration)
+            this.saveRegistrations(parsed)
+            return parsed
           }
         }
       } catch (apiErr) {
@@ -1985,13 +1986,46 @@ export const LocalDB = {
 }
 
 function parseRegistration(raw: any): TeamRegistration {
-  const members = Array.isArray(raw.members) ? raw.members : (typeof raw.members === 'string' ? JSON.parse(raw.members) : [])
+  let members = []
+  try {
+    members = Array.isArray(raw.members) ? raw.members : (typeof raw.members === 'string' ? JSON.parse(raw.members) : [])
+  } catch {
+    members = []
+  }
   const assigned_problem_statement = raw.assigned_problem_statement || (members[0] && members[0].assigned_problem_statement) || undefined
   const assigned_datasheet = raw.assigned_datasheet || (members[0] && members[0].assigned_datasheet) || undefined
   const assigned_auction_sheet = raw.assigned_auction_sheet || (members[0] && members[0].assigned_auction_sheet) || undefined
 
+  // Compute clean leader_name
+  let leader_name = 'Team Leader'
+  if (Array.isArray(members) && members.length > 0) {
+    if (raw.leader_email) {
+      const match = members.find((m: any) => m?.email && m.email.trim().toLowerCase() === raw.leader_email.trim().toLowerCase())
+      if (match?.name && typeof match.name === 'string' && match.name.trim()) {
+        leader_name = match.name.trim()
+      }
+    }
+    if (leader_name === 'Team Leader' && members[0]?.name && typeof members[0].name === 'string' && members[0].name.trim()) {
+      leader_name = members[0].name.trim()
+    }
+  }
+  if (leader_name === 'Team Leader' && raw.leader_name && typeof raw.leader_name === 'string' && raw.leader_name.trim()) {
+    leader_name = raw.leader_name.trim()
+  }
+  if (leader_name === 'Team Leader' && raw.leader_email && typeof raw.leader_email === 'string') {
+    const rawName = raw.leader_email.split('@')[0].replace(/[._0-9]/g, ' ').trim()
+    if (rawName) {
+      leader_name = rawName
+        .split(' ')
+        .filter(Boolean)
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ')
+    }
+  }
+
   return {
     ...raw,
+    leader_name,
     score: Number(raw.score) || 0,
     round_1_score: Number(raw.round_1_score) || 0,
     round_2_score: Number(raw.round_2_score) || 0,
@@ -2153,7 +2187,7 @@ export function exportLeaderboardToExcel(registrations: TeamRegistration[], file
     'R5: The Hidden Insider Challenge': reg.round_5_score || 0,
     'R6: The Boardroom Showdown': reg.round_6_score || 0,
     'Brownie Points': reg.brownie_points || 0,
-    'Team Leader': reg.leader_email,
+    'Team Leader': reg.leader_name || (reg.members?.[0]?.name) || (reg.leader_email ? reg.leader_email.split('@')[0] : 'Squad Leader'),
     'Members Count': reg.members?.length || 0,
     'Judge Remarks': reg.judge_notes || '',
     'Hackathon': reg.hackathon_name

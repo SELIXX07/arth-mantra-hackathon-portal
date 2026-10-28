@@ -111,6 +111,7 @@ export interface TeamRegistration {
   hackathon_name: string;
   leader_user_id: string;
   leader_email: string;
+  leader_name?: string;
   team_name: string;
   members: TeamMember[];   // member[0] = leader, member[1..5] = rest
   payment_screenshot_url: string;

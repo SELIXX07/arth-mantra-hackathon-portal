@@ -12,12 +12,55 @@ const getSupabaseAdmin = () => {
 
 let cache: { [key: string]: { timestamp: number; data: any } } = {}
 
+const resolveLeaderName = (raw: any, members: any[]): string => {
+  if (Array.isArray(members) && members.length > 0) {
+    if (raw.leader_email) {
+      const match = members.find(
+        (m: any) => m?.email && m.email.trim().toLowerCase() === raw.leader_email.trim().toLowerCase()
+      )
+      if (match?.name && typeof match.name === 'string' && match.name.trim()) {
+        return match.name.trim()
+      }
+    }
+    if (members[0]?.name && typeof members[0].name === 'string' && members[0].name.trim()) {
+      return members[0].name.trim()
+    }
+  }
+
+  if (raw.leader_name && typeof raw.leader_name === 'string' && raw.leader_name.trim()) {
+    return raw.leader_name.trim()
+  }
+
+  if (raw.leader_email && typeof raw.leader_email === 'string') {
+    const rawName = raw.leader_email.split('@')[0].replace(/[._0-9]/g, ' ').trim()
+    if (rawName) {
+      return rawName
+        .split(' ')
+        .filter(Boolean)
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ')
+    }
+  }
+
+  return 'Team Leader'
+}
+
 const parseRow = (raw: any) => {
-  return {
-    ...raw,
-    members: Array.isArray(raw.members)
+  let members: any[] = []
+  try {
+    members = Array.isArray(raw.members)
       ? raw.members
       : (typeof raw.members === 'string' ? JSON.parse(raw.members) : [])
+  } catch {
+    members = []
+  }
+
+  const leader_name = resolveLeaderName(raw, members)
+
+  return {
+    ...raw,
+    members,
+    leader_name
   }
 }
 
