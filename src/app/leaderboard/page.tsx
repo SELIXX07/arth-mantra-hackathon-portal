@@ -77,12 +77,24 @@ export default function LeaderboardPage() {
     if (!background) setLoading(true)
     setIsRefreshing(true)
     try {
-      const [activeHack, allRegs] = await Promise.all([
+      // Force fresh server fetch bypassing any client or HTTP caches
+      let freshRegs: TeamRegistration[] = []
+      try {
+        const res = await fetch(`/api/registrations?_t=${Date.now()}`, { cache: 'no-store' })
+        if (res.ok) {
+          const json = await res.json()
+          if (json.success && Array.isArray(json.registrations)) {
+            freshRegs = json.registrations
+          }
+        }
+      } catch (_) {}
+
+      const [activeHack, fallbackRegs] = await Promise.all([
         LocalDB.getActiveHackathon(),
-        LocalDB.getRegistrationsAsync()
+        freshRegs.length > 0 ? Promise.resolve(freshRegs) : LocalDB.getRegistrationsAsync()
       ])
       setHackathon(activeHack)
-      setRegistrations(allRegs)
+      setRegistrations(freshRegs.length > 0 ? freshRegs : fallbackRegs)
     } finally {
       if (!background) setLoading(false)
       setIsRefreshing(false)
