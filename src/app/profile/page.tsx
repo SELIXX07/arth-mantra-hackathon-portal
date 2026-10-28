@@ -964,7 +964,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Team Name</span>
-                          <span className="font-bold text-[#00D2FF]">{registration.team_name}</span>
+                          <span className="font-bold text-[#00D2FF] uppercase">{registration.team_name}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Submitted</span>

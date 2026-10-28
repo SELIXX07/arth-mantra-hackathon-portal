@@ -601,6 +601,7 @@ export const LocalDB = {
   ): Promise<TeamRegistration> {
     const newReg: TeamRegistration = {
       ...registration,
+      team_name: registration.team_name ? String(registration.team_name).trim().toUpperCase() : '',
       id: 'reg-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
       status: 'pending',
       created_at: new Date().toISOString(),
@@ -2023,8 +2024,11 @@ function parseRegistration(raw: any): TeamRegistration {
     }
   }
 
+  const team_name = raw.team_name ? String(raw.team_name).trim().toUpperCase() : ''
+
   return {
     ...raw,
+    team_name,
     leader_name,
     score: Number(raw.score) || 0,
     round_1_score: Number(raw.round_1_score) || 0,

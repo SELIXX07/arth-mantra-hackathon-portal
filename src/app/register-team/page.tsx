@@ -197,7 +197,7 @@ export default function RegisterTeamPage() {
         hackathon_name: hackathon.name,
         leader_user_id: user.id,
         leader_email: user.email,
-        team_name: teamName.trim(),
+        team_name: teamName.trim().toUpperCase(),
         members,
         payment_screenshot_url: finalScreenshotUrl,
         utr_reference: utrNumber.trim() || undefined,
@@ -276,7 +276,7 @@ export default function RegisterTeamPage() {
           <div className={`${cfg.text} flex items-center justify-center gap-2 text-lg font-black mb-2`}>
             {cfg.icon} Your team is {cfg.label}
           </div>
-          <p className="text-white text-base font-bold mb-1">Team: <strong>{existingReg.team_name}</strong></p>
+          <p className="text-white text-base font-bold mb-1">Team: <strong className="uppercase">{existingReg.team_name}</strong></p>
           <p className="text-slate-400 text-xs mb-5">
             Submitted on {new Date(existingReg.created_at).toLocaleDateString()}
           </p>
@@ -948,7 +948,7 @@ export default function RegisterTeamPage() {
             <div>
               <h2 className="text-2xl sm:text-3xl font-black text-white">Registration Submitted! 🎉</h2>
               <p className="text-slate-300 text-sm mt-1">
-                Your team <strong className="text-[#00D2FF]">{submittedReg.team_name}</strong> is now waitlisted for review.
+                Your team <strong className="text-[#00D2FF] uppercase">{submittedReg.team_name}</strong> is now waitlisted for review.
               </p>
               <p className="text-slate-400 text-xs mt-1">
                 The organizing faculty will review your payment receipt. Once approved, you will unlock your spot & the official WhatsApp group link!
@@ -958,7 +958,7 @@ export default function RegisterTeamPage() {
             <div className="bg-[#080E1C] rounded-2xl p-4 text-left border border-slate-800 text-xs space-y-2">
               <div className="flex justify-between">
                 <span className="text-slate-400">Team Name</span>
-                <span className="font-bold text-white">{submittedReg.team_name}</span>
+                <span className="font-bold text-white uppercase">{submittedReg.team_name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Roster</span>

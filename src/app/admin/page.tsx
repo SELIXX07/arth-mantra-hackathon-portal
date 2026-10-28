@@ -2178,7 +2178,7 @@ export default function AdminDashboardPage() {
                       <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-lg font-black text-white">{reg.team_name}</span>
+                            <span className="text-lg font-black text-white uppercase">{reg.team_name}</span>
                             <span className={`text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full border ${
                               reg.status === 'approved'
                                 ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800'
@@ -2932,7 +2932,7 @@ export default function AdminDashboardPage() {
                         </span>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-base font-black text-white">{team.team_name}</span>
+                            <span className="text-base font-black text-white uppercase">{team.team_name}</span>
                             <span className="text-[10px] text-slate-400">({team.members?.length} members)</span>
                           </div>
                           <div className="text-xs text-slate-300">
@@ -3575,7 +3575,7 @@ export default function AdminDashboardPage() {
                         return (
                           <tr key={reg.id} className="hover:bg-slate-900/40">
                             <td className="py-2.5 px-3 text-slate-500">{idx + 1}</td>
-                            <td className="py-2.5 px-3 font-bold text-white">{reg.team_name}</td>
+                            <td className="py-2.5 px-3 font-bold text-white uppercase">{reg.team_name}</td>
                             <td className="py-2.5 px-3 font-bold text-cyan-400">{teamCode}</td>
                             <td className="py-2.5 px-3 text-slate-300">{pin}</td>
                             <td className="py-2.5 px-3 text-slate-300">

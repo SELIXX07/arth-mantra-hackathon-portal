@@ -56,9 +56,11 @@ const parseRow = (raw: any) => {
   }
 
   const leader_name = resolveLeaderName(raw, members)
+  const team_name = raw.team_name ? String(raw.team_name).trim().toUpperCase() : ''
 
   return {
     ...raw,
+    team_name,
     members,
     leader_name
   }
@@ -204,6 +206,7 @@ export async function PATCH(req: NextRequest) {
     const payload: any = {
       updated_at: new Date().toISOString()
     }
+    if (body.team_name !== undefined) payload.team_name = String(body.team_name).trim().toUpperCase()
     if (status) payload.status = status
     if (rejection_comment !== undefined) payload.rejection_comment = rejection_comment
     if (reviewed_by) {

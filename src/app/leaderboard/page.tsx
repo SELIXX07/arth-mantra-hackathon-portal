@@ -456,7 +456,7 @@ export default function LeaderboardPage() {
 
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-black text-sm text-white group-hover:text-cyan-300 transition-colors tracking-tight font-sans">
+                                <span className="font-black text-sm text-white group-hover:text-cyan-300 transition-colors tracking-tight font-sans uppercase">
                                   {team.team_name}
                                 </span>
                                 {isMyTeam && (
@@ -601,7 +601,7 @@ export default function LeaderboardPage() {
 
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-black text-sm text-white truncate font-sans">{team.team_name}</span>
+                            <span className="font-black text-sm text-white truncate font-sans uppercase">{team.team_name}</span>
                             {isMyTeam && (
                               <span className="text-[9px] uppercase font-black px-1.5 py-0.5 rounded bg-cyan-500/20 text-[#00D2FF] border border-cyan-500/50">
                                 YOU
