@@ -101,6 +101,7 @@ export interface Hackathon {
   datasheets_released?: boolean;
   auction_released?: boolean;
   auction_sheet?: AuctionSheet;
+  registration_deadline?: string;
   created_by: string;
   created_at: string;
 }

@@ -154,6 +154,11 @@ export default function RegisterTeamPage() {
     e.preventDefault()
     if (!hackathon || !user) return
 
+    if (hackathon.registration_deadline && new Date(hackathon.registration_deadline).getTime() <= Date.now()) {
+      showToast('Registration deadline has passed. Registrations are closed.', 'error')
+      return
+    }
+
     if (!screenshotFile && !screenshotPreview) {
       showToast('Please upload your payment screenshot proof.', 'warning')
       return
@@ -292,6 +297,52 @@ export default function RegisterTeamPage() {
             View Full Team Dashboard →
           </Link>
         </motion.div>
+      </div>
+    )
+  }
+
+  // Registration Deadline Check
+  const isDeadlinePassed = Boolean(
+    hackathon.registration_deadline &&
+    new Date(hackathon.registration_deadline).getTime() <= Date.now()
+  )
+
+  if (isDeadlinePassed && step !== 3) {
+    const formattedDeadline = new Date(hackathon.registration_deadline!).toLocaleString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center gap-5 bg-[#050814]">
+        <div className="w-16 h-16 rounded-2xl bg-rose-950/60 border border-rose-800 text-rose-400 flex items-center justify-center shadow-lg">
+          <Clock className="w-8 h-8" />
+        </div>
+        <div className="max-w-md">
+          <span className="text-[10px] font-black uppercase tracking-widest text-rose-400 bg-rose-950/60 px-3 py-1 rounded-full border border-rose-800 inline-block mb-3">
+            Registration Window Closed
+          </span>
+          <h1 className="text-2xl font-black text-white mb-2">Registrations Are Closed</h1>
+          <p className="text-slate-300 text-sm leading-relaxed">
+            Registrations for <strong className="text-white">{hackathon.name}</strong> officially closed on{' '}
+            <strong className="text-rose-300">{formattedDeadline}</strong>.
+          </p>
+          <p className="text-slate-500 text-xs mt-3">
+            If you need assistance or have urgent queries, please contact the student & faculty coordinators on the event poster.
+          </p>
+        </div>
+        <div className="flex gap-3 mt-2">
+          <Link href="/" className="py-2.5 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all">
+            ← Back to Home
+          </Link>
+          <Link href="/leaderboard" className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold text-xs transition-all">
+            View Live Leaderboard →
+          </Link>
+        </div>
       </div>
     )
   }

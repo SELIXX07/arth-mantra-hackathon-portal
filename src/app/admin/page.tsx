@@ -448,6 +448,7 @@ export default function AdminDashboardPage() {
   const [hackWhatsappLink, setHackWhatsappLink] = useState('')
   const [hackIsActive, setHackIsActive] = useState(true)
   const [hackShowRegisteredTeams, setHackShowRegisteredTeams] = useState(true)
+  const [hackRegDeadline, setHackRegDeadline] = useState('')
   const [expandedHackathonTeamsId, setExpandedHackathonTeamsId] = useState<string | null>(null)
   const [isSubmittingHackathon, setIsSubmittingHackathon] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
@@ -1204,6 +1205,8 @@ export default function AdminDashboardPage() {
         }
       }
 
+      const deadlineIso = hackRegDeadline ? new Date(hackRegDeadline).toISOString() : null
+
       if (isEditingHackathon && editingHackathonId) {
         await LocalDB.updateHackathon(editingHackathonId, {
           name: hackName.trim(),
@@ -1214,11 +1217,15 @@ export default function AdminDashboardPage() {
           poster_url: finalPosterUrl || undefined,
           whatsapp_link: hackWhatsappLink.trim() || undefined,
           is_active: hackIsActive,
-          show_registered_teams: hackShowRegisteredTeams
+          show_registered_teams: hackShowRegisteredTeams,
+          registration_deadline: deadlineIso || undefined
+        })
+        await LocalDB.updateMarketConfig(editingHackathonId, {
+          registration_deadline: deadlineIso
         })
         showToast(`Hackathon "${hackName}" updated!`, 'success')
       } else {
-        await LocalDB.addHackathon({
+        const created = await LocalDB.addHackathon({
           name: hackName.trim(),
           date: hackDate.trim(),
           entry_fee: Number(hackFee) || 0,
@@ -1228,8 +1235,14 @@ export default function AdminDashboardPage() {
           whatsapp_link: hackWhatsappLink.trim() || undefined,
           is_active: hackIsActive,
           show_registered_teams: hackShowRegisteredTeams,
+          registration_deadline: deadlineIso || undefined,
           created_by: user?.email || 'artharambachalil@gmail.com'
         })
+        if (created && deadlineIso) {
+          await LocalDB.updateMarketConfig(created.id, {
+            registration_deadline: deadlineIso
+          })
+        }
         showToast(`Hackathon "${hackName}" published!`, 'success')
       }
 
@@ -1255,6 +1268,7 @@ export default function AdminDashboardPage() {
     setHackWhatsappLink('')
     setHackIsActive(true)
     setHackShowRegisteredTeams(true)
+    setHackRegDeadline('')
   }
 
   const handleQuickFillArthMantra = () => {
@@ -1267,6 +1281,7 @@ export default function AdminDashboardPage() {
     setHackWhatsappLink(PRESET_ARTH_MANTRA.whatsapp_link || '')
     setHackIsActive(true)
     setHackShowRegisteredTeams(true)
+    setHackRegDeadline('')
     showToast('Loaded Arth Mantra details into form. Review and click "Publish Hackathon".', 'info')
   }
 
@@ -1356,6 +1371,22 @@ export default function AdminDashboardPage() {
     setHackWhatsappLink(hack.whatsapp_link || '')
     setHackIsActive(hack.is_active)
     setHackShowRegisteredTeams(hack.show_registered_teams !== false)
+    if (hack.registration_deadline) {
+      try {
+        const d = new Date(hack.registration_deadline)
+        if (!isNaN(d.getTime())) {
+          const pad = (n: number) => String(n).padStart(2, '0')
+          const localStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+          setHackRegDeadline(localStr)
+        } else {
+          setHackRegDeadline('')
+        }
+      } catch {
+        setHackRegDeadline('')
+      }
+    } else {
+      setHackRegDeadline('')
+    }
     showToast(`Editing "${hack.name}". Update details and save below.`, 'info')
     setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -3160,6 +3191,61 @@ export default function AdminDashboardPage() {
                         }`}
                       />
                     </button>
+                  </div>
+                </div>
+
+                {/* Registration Deadline (Closing Date & Time) */}
+                <div className="p-4 rounded-2xl bg-[#080E1C] border border-cyan-800/60 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <label className="text-xs font-black text-white flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-[#FF7A00]" />
+                        <span>Registration Deadline (Last Date & Time to Register)</span>
+                      </label>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Registrations will automatically close at this exact date & time. Leave empty to keep registrations open indefinitely.
+                      </p>
+                    </div>
+                    {hackRegDeadline && (
+                      <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${
+                        new Date(hackRegDeadline).getTime() <= Date.now()
+                          ? 'bg-rose-950/80 text-rose-300 border-rose-700/80'
+                          : 'bg-emerald-950/80 text-emerald-300 border-emerald-700/80'
+                      }`}>
+                        {new Date(hackRegDeadline).getTime() <= Date.now() ? '🔴 Registrations Closed' : '🟢 Open Until Deadline'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input
+                      type="datetime-local"
+                      value={hackRegDeadline}
+                      onChange={e => setHackRegDeadline(e.target.value)}
+                      className="p-2.5 text-xs rounded-xl border border-slate-700 bg-[#0C1222] text-white focus:outline-none focus:border-[#00D2FF] font-mono cursor-pointer"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date()
+                        now.setMinutes(now.getMinutes() - 1)
+                        const pad = (n: number) => String(n).padStart(2, '0')
+                        const str = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
+                        setHackRegDeadline(str)
+                      }}
+                      className="px-3 py-2 text-xs font-bold rounded-xl border border-rose-800/80 bg-rose-950/40 hover:bg-rose-950 text-rose-300 transition-all cursor-pointer"
+                    >
+                      Close Registrations Now
+                    </button>
+                    {hackRegDeadline && (
+                      <button
+                        type="button"
+                        onClick={() => setHackRegDeadline('')}
+                        className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all cursor-pointer"
+                      >
+                        Clear Deadline (Keep Open)
+                      </button>
+                    )}
                   </div>
                 </div>
 

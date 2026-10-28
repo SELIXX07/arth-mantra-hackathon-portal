@@ -7,7 +7,7 @@ import {
   Calendar, Users, ArrowRight, Compass, Edit3, CheckCircle2,
   Clock, XCircle, Trophy, TrendingUp, BarChart3, LineChart,
   ShieldCheck, MapPin, Sparkles, DollarSign, Award, ChevronRight,
-  Eye, EyeOff
+  Eye, EyeOff, Lock
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
@@ -21,6 +21,44 @@ export default function HomePage() {
   const [approvedCount, setApprovedCount] = useState(0)
   const [myRegistration, setMyRegistration] = useState<TeamRegistration | null>(null)
   const [loading, setLoading] = useState(true)
+  const [timeLeft, setTimeLeft] = useState('')
+
+  useEffect(() => {
+    if (!hackathon?.registration_deadline) {
+      setTimeLeft('')
+      return
+    }
+
+    const calcTime = () => {
+      const target = new Date(hackathon.registration_deadline!).getTime()
+      const diff = target - Date.now()
+      if (diff <= 0) {
+        setTimeLeft('')
+        return
+      }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
+      const minutes = Math.floor((diff / 1000 / 60) % 60)
+      const seconds = Math.floor((diff / 1000) % 60)
+
+      if (days > 0) {
+        setTimeLeft(`${days}d ${hours}h ${minutes}m`)
+      } else if (hours > 0) {
+        setTimeLeft(`${hours}h ${minutes}m ${seconds}s`)
+      } else {
+        setTimeLeft(`${minutes}m ${seconds}s`)
+      }
+    }
+
+    calcTime()
+    const timer = setInterval(calcTime, 1000)
+    return () => clearInterval(timer)
+  }, [hackathon?.registration_deadline])
+
+  const isDeadlinePassed = Boolean(
+    hackathon?.registration_deadline &&
+    new Date(hackathon.registration_deadline).getTime() <= Date.now()
+  )
 
   const handleToggleShowTeamsCount = async () => {
     if (!hackathon) return
@@ -166,16 +204,23 @@ export default function HomePage() {
                   Official Event Poster • PES University
                 </span>
               </div>
-              <Link
-                href={user ? (myRegistration ? "/profile" : "/register-team") : "/register"}
-                className="group"
-              >
-                <div className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-gradient-to-r from-[#FF7A00] via-[#FFA500] to-[#FFD700] hover:brightness-110 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(255,122,0,0.6)] border border-white/50 active:scale-95 transition-all cursor-pointer">
-                  <Sparkles className="w-4 h-4 text-slate-950 fill-current" />
-                  <span>REGISTER NOW!!!</span>
-                  <ArrowRight className="w-4 h-4 text-slate-950 group-hover:translate-x-1 transition-transform" />
+              {isDeadlinePassed ? (
+                <div className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-rose-950/80 text-rose-300 font-black text-xs uppercase tracking-wider border border-rose-700/80 shadow-md">
+                  <Clock className="w-4 h-4 text-rose-400" />
+                  <span>REGISTRATIONS CLOSED</span>
                 </div>
-              </Link>
+              ) : (
+                <Link
+                  href={user ? (myRegistration ? "/profile" : "/register-team") : "/register"}
+                  className="group"
+                >
+                  <div className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-gradient-to-r from-[#FF7A00] via-[#FFA500] to-[#FFD700] hover:brightness-110 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(255,122,0,0.6)] border border-white/50 active:scale-95 transition-all cursor-pointer">
+                    <Sparkles className="w-4 h-4 text-slate-950 fill-current" />
+                    <span>REGISTER NOW!!!</span>
+                    <ArrowRight className="w-4 h-4 text-slate-950 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </Link>
+              )}
             </div>
 
             {/* Poster Showcase (Full-Bleed, Uncropped 16:9 Display) */}
@@ -270,33 +315,81 @@ export default function HomePage() {
                   )}
                 </div>
 
-                {/* High-Visibility "REGISTER NOW!!!" Callout Banner */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#FF7A00]/25 via-[#FFD700]/20 to-[#00D2FF]/20 border-2 border-[#FF7A00]/80 shadow-[0_0_30px_rgba(255,122,0,0.35)] flex flex-col sm:flex-row items-center justify-between gap-4">
+                {/* High-Visibility Callout Banner */}
+                <div className={`p-4 sm:p-5 rounded-2xl border-2 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all ${
+                  isDeadlinePassed
+                    ? 'bg-gradient-to-r from-rose-950/40 via-slate-900 to-rose-950/20 border-rose-800/80 shadow-[0_0_25px_rgba(244,63,94,0.2)]'
+                    : 'bg-gradient-to-r from-[#FF7A00]/25 via-[#FFD700]/20 to-[#00D2FF]/20 border-[#FF7A00]/80 shadow-[0_0_30px_rgba(255,122,0,0.35)]'
+                }`}>
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#FFA500] text-slate-950 flex items-center justify-center font-black text-xl shadow-[0_0_15px_rgba(255,122,0,0.5)] flex-shrink-0 animate-bounce">
-                      🔥
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl flex-shrink-0 ${
+                      isDeadlinePassed ? 'bg-rose-900/80 text-rose-300 border border-rose-700' : 'bg-gradient-to-br from-[#FF7A00] to-[#FFA500] text-slate-950 animate-bounce shadow-[0_0_15px_rgba(255,122,0,0.5)]'
+                    }`}>
+                      {isDeadlinePassed ? '🔒' : '🔥'}
                     </div>
                     <div>
                       <div className="text-base sm:text-lg font-black text-white flex items-center gap-2 flex-wrap">
-                        <span>ARTHMANTRA: THE BULL RUN IS LIVE!</span>
-                        <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#FF7A00] text-slate-950 shadow-sm animate-pulse">
-                          SLOTS FILLING FAST
+                        <span>{isDeadlinePassed ? 'REGISTRATION WINDOW CONCLUDED' : 'ARTHMANTRA: THE BULL RUN IS LIVE!'}</span>
+                        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                          isDeadlinePassed
+                            ? 'bg-rose-950 text-rose-300 border border-rose-700'
+                            : 'bg-[#FF7A00] text-slate-950 shadow-sm animate-pulse'
+                        }`}>
+                          {isDeadlinePassed ? 'CLOSED' : 'SLOTS FILLING FAST'}
                         </span>
+                        {!isDeadlinePassed && timeLeft && (
+                          <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-600">
+                            ⏱ Closes in {timeLeft}
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-amber-200/90 font-medium mt-0.5">
-                        24-Hour Techno-Financial Sprint • PESU 52 • 4 to 6 members / squad • Entry ₹{hackathon.entry_fee}
+                        {isDeadlinePassed
+                          ? `Registrations for Arth Mantra closed on ${new Date(hackathon.registration_deadline!).toLocaleString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })}.`
+                          : hackathon.registration_deadline
+                          ? `Closes on ${new Date(hackathon.registration_deadline).toLocaleString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })} • Entry ₹${hackathon.entry_fee}`
+                          : `24-Hour Techno-Financial Sprint • PESU 52 • 4 to 6 members / squad • Entry ₹${hackathon.entry_fee}`}
                       </p>
                     </div>
                   </div>
 
-                  <Link
-                    href={user ? (myRegistration ? "/profile" : "/register-team") : "/register"}
-                    className="w-full sm:w-auto py-3 px-8 rounded-xl bg-gradient-to-r from-[#FF7A00] via-[#FFA500] to-[#FFD700] hover:brightness-110 text-slate-950 font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(255,122,0,0.6)] transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap active:scale-95 group"
-                  >
-                    <Sparkles className="w-4 h-4 text-slate-950 fill-current" />
-                    <span>REGISTER NOW!!!</span>
-                    <ArrowRight className="w-4 h-4 text-slate-950 group-hover:translate-x-1 transition-transform" />
-                  </Link>
+                  {isDeadlinePassed ? (
+                    myRegistration ? (
+                      <Link
+                        href="/profile"
+                        className="w-full sm:w-auto py-3 px-6 rounded-xl bg-cyan-950 border border-cyan-700 text-[#00D2FF] font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        View Your Squad Dashboard →
+                      </Link>
+                    ) : (
+                      <div className="w-full sm:w-auto py-3 px-6 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-not-allowed">
+                        <Lock className="w-3.5 h-3.5" /> Registrations Closed
+                      </div>
+                    )
+                  ) : (
+                    <Link
+                      href={user ? (myRegistration ? "/profile" : "/register-team") : "/register"}
+                      className="w-full sm:w-auto py-3 px-8 rounded-xl bg-gradient-to-r from-[#FF7A00] via-[#FFA500] to-[#FFD700] hover:brightness-110 text-slate-950 font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(255,122,0,0.6)] transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap active:scale-95 group"
+                    >
+                      <Sparkles className="w-4 h-4 text-slate-950 fill-current" />
+                      <span>REGISTER NOW!!!</span>
+                      <ArrowRight className="w-4 h-4 text-slate-950 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  )}
                 </div>
 
                 {/* Core Pillars Grid */}
@@ -440,7 +533,24 @@ export default function HomePage() {
 
                 {/* CTAs */}
                 <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  {!user ? (
+                  {isDeadlinePassed ? (
+                    myRegistration ? (
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        {statusBadge()}
+                        <Link
+                          href="/profile"
+                          className="py-3 px-5 rounded-xl border border-cyan-800 bg-cyan-950/50 hover:bg-cyan-900/50 text-[#00D2FF] font-black text-xs uppercase tracking-wider transition-all"
+                        >
+                          View Team Status & WhatsApp Group →
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 py-3 px-5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 font-bold text-xs uppercase tracking-wider">
+                        <Lock className="w-4 h-4 text-rose-400" />
+                        <span>Registration Window Closed</span>
+                      </div>
+                    )
+                  ) : !user ? (
                     <Link
                       href="/register"
                       className="flex items-center justify-center gap-2 py-4 px-8 rounded-xl bg-gradient-to-r from-[#FF7A00] via-[#FFA500] to-[#FFD700] hover:brightness-110 text-slate-950 font-black text-sm uppercase tracking-wider transition-all shadow-[0_0_25px_rgba(255,122,0,0.5)] group"

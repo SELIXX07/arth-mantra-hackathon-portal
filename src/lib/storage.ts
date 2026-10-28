@@ -74,6 +74,7 @@ function parseHackathon(data: any): Hackathon {
   let datasheetsReleased = Boolean(data.datasheets_released)
   let auctionReleased = Boolean(data.auction_released)
   let auctionSheet: AuctionSheet | undefined = data.auction_sheet || undefined
+  let registrationDeadline: string | undefined = data.registration_deadline || undefined
   if (data.upi_id && typeof data.upi_id === 'string' && data.upi_id.includes('MARKET_CONFIG:')) {
     try {
       const jsonStr = data.upi_id.substring(data.upi_id.indexOf('MARKET_CONFIG:') + 'MARKET_CONFIG:'.length)
@@ -84,6 +85,7 @@ function parseHackathon(data: any): Hackathon {
         if (parsed.datasheets_released !== undefined) datasheetsReleased = Boolean(parsed.datasheets_released)
         if (parsed.auction_released !== undefined) auctionReleased = Boolean(parsed.auction_released)
         if (parsed.auction_sheet !== undefined) auctionSheet = parsed.auction_sheet || undefined
+        if (parsed.registration_deadline !== undefined) registrationDeadline = parsed.registration_deadline || undefined
       }
     } catch (_) {}
   }
@@ -93,7 +95,8 @@ function parseHackathon(data: any): Hackathon {
     ps_released: psReleased,
     datasheets_released: datasheetsReleased,
     auction_released: auctionReleased,
-    auction_sheet: auctionSheet
+    auction_sheet: auctionSheet,
+    registration_deadline: registrationDeadline
   } as Hackathon
 }
 
@@ -183,6 +186,7 @@ export const LocalDB = {
       datasheets_released?: boolean;
       auction_released?: boolean;
       auction_sheet?: AuctionSheet | null;
+      registration_deadline?: string | null;
     }
   ): Promise<boolean> {
     const supabase = getSupabase()
@@ -228,6 +232,7 @@ export const LocalDB = {
             if (merged.datasheets_released !== undefined) hackathons[idx].datasheets_released = Boolean(merged.datasheets_released)
             if (merged.auction_released !== undefined) hackathons[idx].auction_released = Boolean(merged.auction_released)
             if (merged.auction_sheet !== undefined) hackathons[idx].auction_sheet = merged.auction_sheet || undefined
+            if (merged.registration_deadline !== undefined) hackathons[idx].registration_deadline = merged.registration_deadline || undefined
             this.saveHackathons(hackathons)
           }
           return true
@@ -599,6 +604,15 @@ export const LocalDB = {
   async addRegistration(
     registration: Omit<TeamRegistration, 'id' | 'created_at' | 'updated_at'>
   ): Promise<TeamRegistration> {
+    // Check registration deadline if set
+    const hackathon = await this.getActiveHackathon()
+    if (hackathon?.registration_deadline) {
+      const deadlineMs = new Date(hackathon.registration_deadline).getTime()
+      if (!isNaN(deadlineMs) && Date.now() > deadlineMs) {
+        throw new Error('Registration deadline has passed. Registrations are now closed.')
+      }
+    }
+
     const newReg: TeamRegistration = {
       ...registration,
       team_name: registration.team_name ? String(registration.team_name).trim().toUpperCase() : '',
