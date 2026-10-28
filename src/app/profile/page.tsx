@@ -197,9 +197,9 @@ export default function ProfilePage() {
   const statusConfig = {
     pending: {
       banner: 'bg-amber-950/40 border-amber-700/60 text-amber-300',
-      icon: <Clock className="w-5 h-5 text-amber-400" />,
-      label: 'Under Review (Waitlisted)',
-      message: 'Your team registration is currently being verified by the organizers.'
+      icon: <Clock className="w-5 h-5 text-amber-400 animate-pulse" />,
+      label: 'Approval Pending (Under Review)',
+      message: 'Your payment screenshot & registration are under review. Please click the button below to join the official WhatsApp group.'
     },
     approved: {
       banner: 'bg-emerald-950/40 border-emerald-700/60 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.15)]',
@@ -515,16 +515,24 @@ export default function ProfilePage() {
                         </div>
                       )}
 
-                      {/* WhatsApp Button for approved */}
-                      {registration.status === 'approved' && (
-                        <a
-                          href={hackathon?.whatsapp_link || 'https://chat.whatsapp.com/ArthMantraHackathon'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 w-full py-3.5 px-5 rounded-2xl bg-[#25D366] hover:bg-[#20BA5A] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(37,211,102,0.3)]"
-                        >
-                          <MessageSquare className="w-4 h-4" /> Join Official Participant WhatsApp Group
-                        </a>
+                      {/* WhatsApp Button for approved or pending */}
+                      {(registration.status === 'approved' || registration.status === 'pending') && (
+                        <div className="space-y-2">
+                          {registration.status === 'pending' && (
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-[#25D366]/15 border border-[#25D366]/40 text-[#25D366] text-xs font-bold">
+                              <MessageSquare className="w-4 h-4 shrink-0 animate-bounce" />
+                              <span>Important: Please click the button below to join the official WhatsApp group while awaiting approval.</span>
+                            </div>
+                          )}
+                          <a
+                            href={hackathon?.whatsapp_link || 'https://chat.whatsapp.com/ArthMantraHackathon'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full py-3.5 px-5 rounded-2xl bg-[#25D366] hover:bg-[#20BA5A] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(37,211,102,0.3)] cursor-pointer"
+                          >
+                            <MessageSquare className="w-4 h-4" /> Join Official Participant WhatsApp Group
+                          </a>
+                        </div>
                       )}
 
                       {/* ASSIGNED PROBLEM STATEMENT (CONFIDENTIAL - ONLY VIEWABLE ONCE REVEALED BY ADMIN) */}

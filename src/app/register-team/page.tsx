@@ -7,7 +7,8 @@ import {
   Compass, ArrowRight, ArrowLeft, Upload, CheckCircle2, AlertCircle,
   Check, Clock, User, Phone, Mail, GraduationCap, Users,
   DollarSign, Sparkles, BookOpen, Layers, Bookmark, Building2,
-  Scale, ChevronDown, ChevronUp, ShieldCheck, Award, FileText
+  Scale, ChevronDown, ChevronUp, ShieldCheck, Award, FileText,
+  MessageSquare
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
@@ -267,8 +268,8 @@ export default function RegisterTeamPage() {
   // Already registered
   if (existingReg && step !== 3) {
     const statusConfig = {
-      pending: { bg: 'bg-amber-950/40', border: 'border-amber-700/60', text: 'text-amber-300', icon: <Clock className="w-5 h-5 text-amber-400" />, label: 'Under Review' },
-      approved: { bg: 'bg-emerald-950/40', border: 'border-emerald-700/60', text: 'text-emerald-300', icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />, label: 'Approved' },
+      pending: { bg: 'bg-amber-950/40', border: 'border-amber-700/60', text: 'text-amber-300', icon: <Clock className="w-5 h-5 text-amber-400 animate-pulse" />, label: 'Approval Pending (Under Review)' },
+      approved: { bg: 'bg-emerald-950/40', border: 'border-emerald-700/60', text: 'text-emerald-300', icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />, label: 'Approved & Confirmed' },
       rejected: { bg: 'bg-rose-950/40', border: 'border-rose-700/60', text: 'text-rose-300', icon: <AlertCircle className="w-5 h-5 text-rose-400" />, label: 'Not Approved' }
     }
     const cfg = statusConfig[existingReg.status]
@@ -276,26 +277,41 @@ export default function RegisterTeamPage() {
     return (
       <div className="min-h-[70vh] flex items-center justify-center px-4 bg-[#050814]">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          className={`${cfg.bg} ${cfg.border} border rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl`}
+          className={`${cfg.bg} ${cfg.border} border rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center shadow-2xl space-y-4`}
         >
-          <div className={`${cfg.text} flex items-center justify-center gap-2 text-lg font-black mb-2`}>
+          <div className={`${cfg.text} flex items-center justify-center gap-2 text-lg font-black`}>
             {cfg.icon} Your team is {cfg.label}
           </div>
-          <p className="text-white text-base font-bold mb-1">Team: <strong className="uppercase">{existingReg.team_name}</strong></p>
-          <p className="text-slate-400 text-xs mb-5">
+          <p className="text-white text-base font-bold">Team: <strong className="uppercase">{existingReg.team_name}</strong></p>
+          <p className="text-slate-400 text-xs">
             Submitted on {new Date(existingReg.created_at).toLocaleDateString()}
           </p>
+
+          {existingReg.status === 'pending' && (
+            <div className="p-4 rounded-2xl bg-[#081510] border border-[#25D366]/50 text-left space-y-2">
+              <div className="flex items-center gap-2 text-[#25D366] text-xs font-black uppercase font-mono">
+                <MessageSquare className="w-4 h-4" /> Next Step:
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed">
+                Please go to your <strong className="text-cyan-300">Profile</strong> and click on <strong className="text-[#25D366]">Join WhatsApp Group</strong> to connect with the organizers and get official updates.
+              </p>
+            </div>
+          )}
+
           {existingReg.rejection_comment && (
-            <p className="text-rose-300 text-xs bg-rose-950/50 border border-rose-800 rounded-xl p-3 mb-5">
+            <p className="text-rose-300 text-xs bg-rose-950/50 border border-rose-800 rounded-xl p-3">
               Reason: {existingReg.rejection_comment}
             </p>
           )}
-          <Link
-            href="/profile"
-            className="inline-flex items-center gap-2 py-3 px-6 rounded-xl bg-gradient-to-r from-[#0072FF] to-[#00D2FF] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(0,210,255,0.3)]"
-          >
-            View Full Team Dashboard →
-          </Link>
+
+          <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center">
+            <Link
+              href="/profile"
+              className="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-gradient-to-r from-[#0072FF] to-[#00D2FF] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(0,210,255,0.3)] hover:brightness-110"
+            >
+              Go to Profile to Join WhatsApp Group →
+            </Link>
+          </div>
         </motion.div>
       </div>
     )
@@ -967,9 +983,9 @@ export default function RegisterTeamPage() {
                   className="w-full sm:flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#0072FF] via-[#00D2FF] to-[#38BDF8] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(0,210,255,0.35)] disabled:opacity-50 cursor-pointer"
                 >
                   {submitting ? (
-                    <><div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" /> Submitting Team...</>
+                    <><div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" /> Uploading Screenshot & Submitting...</>
                   ) : (
-                    <>Submit Team Registration →</>
+                    <>Send Payment Screenshot & Submit →</>
                   )}
                 </button>
               </div>
@@ -985,25 +1001,65 @@ export default function RegisterTeamPage() {
           </motion.div>
         )}
 
-        {/* STEP 3: Confirmation */}
+        {/* STEP 3: Confirmation / Approval Pending */}
         {step === 3 && submittedReg && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-[#0C1222] rounded-3xl p-5 sm:p-8 border border-slate-800 shadow-2xl text-center space-y-6"
           >
-            <div className="w-20 h-20 rounded-full bg-emerald-950/60 border border-emerald-500/80 flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(16,185,129,0.3)]">
-              <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+            <div className="w-20 h-20 rounded-full bg-amber-950/60 border border-amber-500/80 flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(245,158,11,0.3)]">
+              <Clock className="w-10 h-10 text-amber-400 animate-pulse" />
             </div>
 
             <div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white">Registration Submitted! 🎉</h2>
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-950/80 border border-amber-700/80 text-amber-300 text-xs font-black uppercase tracking-wider mb-2.5">
+                <Clock className="w-3.5 h-3.5 text-amber-400" /> Payment Received • Approval Pending
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-white">Payment Screenshot Sent! 🎉</h2>
               <p className="text-slate-300 text-sm mt-1">
-                Your team <strong className="text-[#00D2FF] uppercase">{submittedReg.team_name}</strong> is now waitlisted for review.
+                Your team <strong className="text-[#00D2FF] uppercase">{submittedReg.team_name}</strong> registration is now <strong className="text-amber-300">Approval Pending (Under Review)</strong>.
               </p>
-              <p className="text-slate-400 text-xs mt-1">
-                The organizing faculty will review your payment receipt. Once approved, you will unlock your spot & the official WhatsApp group link!
-              </p>
+            </div>
+
+            {/* Prominent WhatsApp Next Step Box */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-[#0B2319] via-[#081B13] to-[#05120D] border-2 border-[#25D366]/70 shadow-[0_0_30px_rgba(37,211,102,0.25)] text-left space-y-3.5">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-[#25D366]/20 border border-[#25D366]/50 flex items-center justify-center text-[#25D366] shrink-0 shadow-md">
+                  <MessageSquare className="w-6 h-6 text-[#25D366]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#25D366] font-mono block">
+                    Important Mandatory Step
+                  </span>
+                  <h3 className="text-sm sm:text-base font-black text-white">
+                    Go to Profile & Click on &quot;Join WhatsApp Group&quot;
+                  </h3>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-black/40 border border-[#25D366]/30">
+                <p className="text-xs text-slate-200 leading-relaxed font-medium">
+                  📢 <strong>Next Step:</strong> You have to go to your <strong className="text-[#00D2FF]">Profile Dashboard</strong> and click on <strong className="text-[#25D366]">&quot;Join Official Participant WhatsApp Group&quot;</strong> to receive essential event updates, round announcements, and coordinator instructions!
+                </p>
+              </div>
+
+              <div className="pt-1 flex flex-col sm:flex-row items-center gap-3">
+                <Link
+                  href="/profile"
+                  className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#0072FF] via-[#00D2FF] to-[#38BDF8] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(0,210,255,0.35)] hover:brightness-110 cursor-pointer"
+                >
+                  <User className="w-4 h-4" /> Go to Profile &amp; Join WhatsApp Group →
+                </Link>
+                <a
+                  href={hackathon?.whatsapp_link || 'https://chat.whatsapp.com/ArthMantraHackathon'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3.5 px-5 rounded-xl bg-[#25D366] hover:bg-[#20BA5A] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(37,211,102,0.35)] cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4" /> Join WhatsApp Group Directly
+                </a>
+              </div>
             </div>
 
             <div className="bg-[#080E1C] rounded-2xl p-4 text-left border border-slate-800 text-xs space-y-2">
@@ -1019,15 +1075,6 @@ export default function RegisterTeamPage() {
                 <span className="text-slate-400">Leader</span>
                 <span className="font-mono text-cyan-300">{submittedReg.leader_email}</span>
               </div>
-            </div>
-
-            <div>
-              <Link
-                href="/profile"
-                className="inline-flex items-center gap-2 py-3.5 px-8 rounded-xl bg-gradient-to-r from-[#0072FF] to-[#00D2FF] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(0,210,255,0.3)]"
-              >
-                Go to Team Dashboard →
-              </Link>
             </div>
           </motion.div>
         )}
