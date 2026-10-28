@@ -307,14 +307,19 @@ export default function AdminDashboardPage() {
         return
       }
 
-      const teamsPayload = approved.map((r) => ({
-        id: r.id,
-        team_code: `ARTH-${r.id.slice(-4).toUpperCase()}`,
-        team_name: r.team_name,
-        password: getTeamTraderPin(r),
-        leader_name: r.leader_email ? r.leader_email.split('@')[0] : 'Leader',
-        leader_email: r.leader_email
-      }))
+      const teamsPayload = approved.map((r) => {
+        const mems = Array.isArray(r.members) ? r.members : []
+        const lMem = mems.find(m => m?.email && r.leader_email && m.email.trim().toLowerCase() === r.leader_email.trim().toLowerCase()) || mems[0]
+        const leaderName = lMem?.name?.trim() || (r.leader_email ? r.leader_email.split('@')[0] : 'Leader')
+        return {
+          id: r.id,
+          team_code: `ARTH-${r.id.slice(-4).toUpperCase()}`,
+          team_name: r.team_name,
+          password: getTeamTraderPin(r),
+          leader_name: leaderName,
+          leader_email: r.leader_email
+        }
+      })
 
       const portalSyncKey = process.env.NEXT_PUBLIC_PORTAL_SYNC_SECRET || 'ArthAdmin2026!'
       const res = await fetch(`${STOCK_MARKET_URL}/api/portal/sync-teams`, {
@@ -2895,7 +2900,9 @@ export default function AdminDashboardPage() {
                             <span className="text-base font-black text-white">{team.team_name}</span>
                             <span className="text-[10px] text-slate-400">({team.members?.length} members)</span>
                           </div>
-                          <div className="text-xs text-slate-400">Leader: {team.leader_email}</div>
+                          <div className="text-xs text-slate-300">
+                            Leader: <strong className="text-white font-semibold">{team.members?.find(m => m?.email && team.leader_email && m.email.toLowerCase() === team.leader_email.toLowerCase())?.name || team.members?.[0]?.name || team.leader_email}</strong>
+                          </div>
                           {team.judge_notes && (
                             <div className="text-xs text-amber-300/80 italic mt-0.5">
                               Remarks: &quot;{team.judge_notes}&quot;
@@ -3199,7 +3206,9 @@ export default function AdminDashboardPage() {
                                 <div key={r.id} className="p-2 bg-[#0C1222] rounded-lg border border-slate-800/80 flex items-center justify-between">
                                   <div>
                                     <div className="font-bold text-white text-[11px]">{r.team_name}</div>
-                                    <div className="text-[10px] text-slate-400">{r.members?.length} members • Leader: {r.leader_email}</div>
+                                    <div className="text-[10px] text-slate-400">
+                                      {r.members?.length} members • Leader: <strong className="text-slate-200">{r.members?.find(m => m?.email && r.leader_email && m.email.toLowerCase() === r.leader_email.toLowerCase())?.name || r.members?.[0]?.name || r.leader_email}</strong>
+                                    </div>
                                   </div>
                                   <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${
                                     r.status === 'approved'
