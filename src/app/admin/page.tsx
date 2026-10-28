@@ -461,6 +461,9 @@ export default function AdminDashboardPage() {
   const [copiedCreds, setCopiedCreds] = useState(false)
 
   // User Password Reset State
+  const [resetModalUser, setResetModalUser] = useState<{ email: string; name: string } | null>(null)
+  const [customPasswordInput, setCustomPasswordInput] = useState('')
+  const [showCustomPassword, setShowCustomPassword] = useState(false)
   const [resetPassResult, setResetPassResult] = useState<{ email: string; name: string; temporaryPassword: string } | null>(null)
   const [isResettingUserPass, setIsResettingUserPass] = useState(false)
   const [copiedResetPass, setCopiedResetPass] = useState(false)
@@ -1331,27 +1334,49 @@ export default function AdminDashboardPage() {
     }
   }
 
-  const handleAdminResetPassword = async (email: string, name?: string) => {
-    if (!confirm(`Reset password for ${name || email}? A new temporary password will be generated immediately.`)) {
+  const handleOpenResetModal = (email: string, name?: string) => {
+    setResetModalUser({ email, name: name || email })
+    setCustomPasswordInput('')
+    setShowCustomPassword(false)
+  }
+
+  const handleGenerateRandomPass = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+    let rand = 'Arth'
+    for (let i = 0; i < 4; i++) {
+      rand += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    rand += '!' + Math.floor(100 + Math.random() * 900)
+    setCustomPasswordInput(rand)
+  }
+
+  const handleExecuteCustomPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!resetModalUser) return
+    const pass = customPasswordInput.trim()
+    if (!pass || pass.length < 6) {
+      showToast('Password must be at least 6 characters long.', 'warning')
       return
     }
 
     setIsResettingUserPass(true)
     try {
-      const res = await LocalDB.adminResetPassword(email)
-      if (res.success && res.temporaryPassword) {
+      const res = await LocalDB.adminResetPassword(resetModalUser.email, pass)
+      if (res.success) {
         setResetPassResult({
-          email,
-          name: name || email,
-          temporaryPassword: res.temporaryPassword
+          email: resetModalUser.email,
+          name: resetModalUser.name,
+          temporaryPassword: pass
         })
+        setResetModalUser(null)
+        setCustomPasswordInput('')
         setCopiedResetPass(false)
-        showToast(`Temporary password generated for ${email}!`, 'success')
+        showToast(`Password successfully updated for ${resetModalUser.email}!`, 'success')
       } else {
-        showToast(res.message || 'Failed to reset password', 'error')
+        showToast(res.message || 'Failed to update password', 'error')
       }
     } catch (e: any) {
-      showToast(e?.message || 'Error resetting password', 'error')
+      showToast(e?.message || 'Error updating password', 'error')
     } finally {
       setIsResettingUserPass(false)
     }
@@ -3933,11 +3958,11 @@ export default function AdminDashboardPage() {
                             <button
                               type="button"
                               disabled={isResettingUserPass}
-                              onClick={() => handleAdminResetPassword(p.email, p.full_name)}
-                              className="py-1.5 px-2.5 rounded-lg border border-amber-900/80 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
-                              title="Reset user's password and generate temporary login credentials"
+                              onClick={() => handleOpenResetModal(p.email, p.full_name)}
+                              className="py-1.5 px-2.5 rounded-lg border border-cyan-800 bg-cyan-950/60 hover:bg-cyan-900/70 text-[#00D2FF] text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                              title="Set a custom password or generate credentials for this user"
                             >
-                              <KeyRound className="w-3.5 h-3.5 text-amber-400" /> Reset Password
+                              <KeyRound className="w-3.5 h-3.5 text-[#00D2FF]" /> Reset Password
                             </button>
                           )}
 
@@ -4816,6 +4841,106 @@ export default function AdminDashboardPage() {
           )}
         </AnimatePresence>
 
+        {/* ── MODAL: SET CUSTOM PASSWORD FOR USER ─────────────────────── */}
+        <AnimatePresence>
+          {resetModalUser && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="bg-[#0C1222] rounded-3xl p-6 sm:p-7 border border-cyan-600/60 shadow-[0_0_25px_rgba(0,210,255,0.2)] max-w-md w-full relative space-y-4"
+              >
+                <button
+                  type="button"
+                  onClick={() => setResetModalUser(null)}
+                  className="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center absolute top-5 right-5 cursor-pointer transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-cyan-950/80 border border-cyan-700/80 text-[#00D2FF] flex items-center justify-center shadow-sm">
+                    <KeyRound className="w-5 h-5 text-[#00D2FF]" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-white">Set User Password</h3>
+                    <p className="text-xs text-slate-400 truncate max-w-[280px]">
+                      {resetModalUser.name} ({resetModalUser.email})
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleExecuteCustomPasswordReset} className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs uppercase font-bold tracking-wider text-slate-300">
+                        Custom Password
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleGenerateRandomPass}
+                        className="text-[11px] font-bold text-[#00D2FF] hover:text-cyan-300 transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <Sparkles className="w-3 h-3" /> Auto-fill random
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showCustomPassword ? 'text' : 'password'}
+                        required
+                        minLength={6}
+                        value={customPasswordInput}
+                        onChange={e => setCustomPasswordInput(e.target.value)}
+                        placeholder="Type custom password (min 6 chars)"
+                        className="w-full bg-[#080E1C] border border-slate-700 focus:border-[#00D2FF] rounded-xl px-3.5 py-2.5 pr-10 text-xs text-white placeholder-slate-500 outline-none font-mono tracking-wider"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomPassword(prev => !prev)}
+                        className="absolute right-3 top-2.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      >
+                        {showCustomPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      The user will be able to log in immediately using this password.
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setResetModalUser(null)}
+                      className="py-2.5 px-4 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isResettingUserPass || customPasswordInput.trim().length < 6}
+                      className="flex-1 py-2.5 px-5 rounded-xl bg-gradient-to-r from-[#0072FF] via-[#00D2FF] to-[#38BDF8] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(0,210,255,0.3)] disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {isResettingUserPass ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                          <span>Saving Password...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Set Password</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         {/* ── MODAL: PASSWORD RESET RESULT ───────────────────────────── */}
         <AnimatePresence>
           {resetPassResult && (
@@ -4824,7 +4949,7 @@ export default function AdminDashboardPage() {
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="bg-[#0C1222] rounded-3xl p-6 sm:p-7 border border-amber-600/60 shadow-[0_0_25px_rgba(245,158,11,0.2)] max-w-md w-full relative space-y-4"
+                className="bg-[#0C1222] rounded-3xl p-6 sm:p-7 border border-emerald-600/60 shadow-[0_0_25px_rgba(16,185,129,0.2)] max-w-md w-full relative space-y-4"
               >
                 <button
                   type="button"
@@ -4835,17 +4960,17 @@ export default function AdminDashboardPage() {
                 </button>
 
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-950/80 border border-amber-700/80 text-amber-400 flex items-center justify-center">
-                    <KeyRound className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-950/80 border border-emerald-700/80 text-emerald-400 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-white">Temporary Password Generated</h3>
+                    <h3 className="text-base font-black text-white">Password Successfully Set!</h3>
                     <p className="text-xs text-slate-400">{resetPassResult.name} ({resetPassResult.email})</p>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-[#080E1C] border border-slate-800 space-y-2">
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Temporary Password</div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Active Password</div>
                   <div className="flex items-center justify-between gap-2 p-2.5 bg-[#0C1222] rounded-xl border border-slate-800 font-mono text-sm text-cyan-300 font-bold">
                     <span>{resetPassResult.temporaryPassword}</span>
                     <button
@@ -4865,7 +4990,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Provide this temporary password to the participant. They can sign in at <strong className="text-white">arth-mantra.vercel.app/login</strong> and immediately change their password in their profile.
+                  Provide this password to the participant. They can sign in immediately at <strong className="text-white">arth-mantra.vercel.app/login</strong>.
                 </p>
 
                 <button
