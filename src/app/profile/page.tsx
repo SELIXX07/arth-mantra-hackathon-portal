@@ -525,7 +525,7 @@ export default function ProfilePage() {
                             </div>
                           )}
                           <a
-                            href={hackathon?.whatsapp_link || 'https://chat.whatsapp.com/ArthMantraHackathon'}
+                            href={hackathon?.whatsapp_link || 'https://chat.whatsapp.com/LTTYgCi34XLHG88fTnvzsu?s=sw&p=a&mlu=4&ilr=4&iam=2'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center justify-center gap-2 w-full py-3.5 px-5 rounded-2xl bg-[#25D366] hover:bg-[#20BA5A] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(37,211,102,0.3)] cursor-pointer"

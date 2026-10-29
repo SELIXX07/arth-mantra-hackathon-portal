@@ -1052,7 +1052,7 @@ export default function RegisterTeamPage() {
                   <User className="w-4 h-4" /> Go to Profile &amp; Join WhatsApp Group →
                 </Link>
                 <a
-                  href={hackathon?.whatsapp_link || 'https://chat.whatsapp.com/ArthMantraHackathon'}
+                  href={hackathon?.whatsapp_link || 'https://chat.whatsapp.com/LTTYgCi34XLHG88fTnvzsu?s=sw&p=a&mlu=4&ilr=4&iam=2'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3.5 px-5 rounded-xl bg-[#25D366] hover:bg-[#20BA5A] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(37,211,102,0.35)] cursor-pointer"

@@ -25,7 +25,7 @@ export const PRESET_ARTH_MANTRA: Omit<Hackathon, 'id' | 'created_at' | 'created_
   max_teams: 50,
   description: 'Unlocking Smarter Solutions for a Stronger Financial Tomorrow. Strategy Meets Finance — Ideas, Analyze, Build, Invest. Hosted at PES University, PESU 52.',
   poster_url: '/arth-mantra-poster.png',
-  whatsapp_link: 'https://chat.whatsapp.com/ArthMantraHackathon',
+  whatsapp_link: 'https://chat.whatsapp.com/LTTYgCi34XLHG88fTnvzsu?s=sw&p=a&mlu=4&ilr=4&iam=2',
   is_active: true,
   show_registered_teams: true
 }
