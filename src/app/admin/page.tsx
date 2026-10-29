@@ -2083,7 +2083,7 @@ export default function AdminDashboardPage() {
                     <option value="name_asc">Sort: Team Name (A-Z)</option>
                     <option value="dept_asc">Sort: Department (A-Z)</option>
                     <option value="sem_asc">Sort: Semester (1 to 7)</option>
-                    <option value="sec_asc">Sort: Section (A to G)</option>
+                    <option value="sec_asc">Sort: Section (A to J)</option>
                   </select>
                 </div>
 
@@ -3768,7 +3768,7 @@ export default function AdminDashboardPage() {
                     <option value="date_desc">Sort: Newest First</option>
                     <option value="dept_asc">Sort: Department (A-Z)</option>
                     <option value="sem_asc">Sort: Semester (1 to 7)</option>
-                    <option value="sec_asc">Sort: Section (A to G)</option>
+                    <option value="sec_asc">Sort: Section (A to J)</option>
                   </select>
 
                   <select

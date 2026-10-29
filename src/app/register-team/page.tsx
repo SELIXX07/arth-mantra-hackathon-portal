@@ -597,7 +597,7 @@ export default function RegisterTeamPage() {
                               className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer font-bold"
                             >
                               <option value="" disabled className="bg-[#0C1222] text-slate-500">
-                                {isOptional ? "-- Section (Optional) --" : "-- Section (A to G) * --"}
+                                {isOptional ? "-- Section (Optional) --" : "-- Section (A to J) * --"}
                               </option>
                               {SECTION_OPTIONS.map(sec => (
                                 <option key={sec} value={sec} className="bg-[#0C1222] text-white">

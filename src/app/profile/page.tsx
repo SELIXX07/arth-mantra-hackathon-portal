@@ -417,7 +417,7 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Section (A-G)</label>
+                      <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Section (A-J)</label>
                       <div className="relative">
                         <select
                           value={editSection}

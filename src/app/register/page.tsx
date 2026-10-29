@@ -274,7 +274,7 @@ export default function RegisterPage() {
             {/* Section */}
             <div>
               <label className="block text-xs uppercase tracking-wider text-slate-300 font-bold mb-1.5">
-                Section (A to G) <span className="text-[#FF7A00]">*</span>
+                Section (A to J) <span className="text-[#FF7A00]">*</span>
               </label>
               <div className="relative">
                 <select

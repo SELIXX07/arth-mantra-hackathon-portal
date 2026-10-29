@@ -34,7 +34,7 @@ export const PES_DEPARTMENTS = [
 
 export const SEMESTER_OPTIONS = ['1', '2', '3', '4', '5', '6', '7'] as const;
 
-export const SECTION_OPTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const;
+export const SECTION_OPTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'] as const;
 
 export const RESIDENCE_OPTIONS = ['Hostelite', 'Non-Hostelite'] as const;
 export type ResidenceType = typeof RESIDENCE_OPTIONS[number];
