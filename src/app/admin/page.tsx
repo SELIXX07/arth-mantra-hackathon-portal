@@ -18,7 +18,7 @@ import { STOCK_MARKET_URL } from '@/lib/config'
 import { TeamRegistration, AdminUser, Hackathon, UserRole, UserProfile, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ProblemStatement, TeamDatasheet, AuctionSheet } from '@/types'
 import Link from 'next/link'
 
-export const ARTH_MANTRA_PS_PRESETS: ProblemStatement[] = [
+const ARTH_MANTRA_PS_PRESETS: ProblemStatement[] = [
   {
     track: 'Algorithmic Trading & Arbitrage',
     title: 'High-Frequency Cross-Venue Arbitrage & Order-Book Liquidity Shield',
