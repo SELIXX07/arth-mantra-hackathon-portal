@@ -329,7 +329,7 @@ export default function HomePage() {
                     </div>
                     <div>
                       <div className="text-base sm:text-lg font-black text-white flex items-center gap-2 flex-wrap">
-                        <span>{isDeadlinePassed ? 'REGISTRATION WINDOW CONCLUDED' : 'ARTHMANTRA: THE BULL RUN IS LIVE!'}</span>
+                        {isDeadlinePassed && <span>REGISTRATION WINDOW CONCLUDED</span>}
                         <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
                           isDeadlinePassed
                             ? 'bg-rose-950 text-rose-300 border border-rose-700'
