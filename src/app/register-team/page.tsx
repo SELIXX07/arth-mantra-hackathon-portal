@@ -659,7 +659,7 @@ export default function RegisterTeamPage() {
                       <Clock className="w-3.5 h-3.5" /> Schedule & Reporting
                     </div>
                     <div className="text-[11px] text-slate-400">
-                      Nov 6th–7th, 2026 (2:00 PM – 2:00 PM). Report to <strong>PESU 52 (13th Floor, B-Block)</strong> by <strong>1:30 PM sharp</strong> with physical PESU ID.
+                      Nov 6th–7th, 2026 (2:00 PM – 2:00 PM). Report to <strong>PESU 52</strong> by <strong>1:30 PM sharp</strong> with physical PESU ID.
                     </div>
                   </div>
 
@@ -728,7 +728,7 @@ export default function RegisterTeamPage() {
                           </h4>
                           <ul className="list-disc list-inside space-y-1 text-slate-300 text-[11px] pl-1">
                             <li><strong>Date & Duration:</strong> November 6th – 7th, 2026 | 2:00 PM to 2:00 PM (24 Hours Non-Stop).</li>
-                            <li><strong>Venue:</strong> PESU 52 / B-Block, 13th Floor, PES University.</li>
+                            <li><strong>Venue:</strong> PESU 52, PES University.</li>
                             <li><strong>Reporting Time:</strong> All teams must report to PESU 52 by <strong>1:30 PM sharp</strong> for team verification, security frisking, and terminal allocation. Late arrivals risk immediate forfeiture of their registration slot.</li>
                             <li><strong>Credentials:</strong> Physical PESU student ID cards and event badges issued at check-in must be visible around the neck at all times.</li>
                           </ul>
