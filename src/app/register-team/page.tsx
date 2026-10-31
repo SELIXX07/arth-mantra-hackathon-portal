@@ -8,12 +8,13 @@ import {
   Check, Clock, User, Phone, Mail, GraduationCap, Users,
   DollarSign, Sparkles, BookOpen, Layers, Bookmark, Building2,
   Scale, ChevronDown, ChevronUp, ShieldCheck, Award, FileText,
-  MessageSquare
+  MessageSquare, Edit3, Lock, Unlock
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
 import { LocalDB } from '@/lib/storage'
 import { Hackathon, TeamMember, TeamRegistration, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS } from '@/types'
+import { isOtherDepartment, getCustomDepartmentText, getSelectDepartmentValue, OTHER_OPTION } from '@/lib/departments'
 
 interface MemberForm {
   name: string
@@ -44,6 +45,7 @@ export default function RegisterTeamPage() {
   const [hackathon, setHackathon] = useState<Hackathon | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
   const [existingReg, setExistingReg] = useState<TeamRegistration | null>(null)
+  const [isEditingExisting, setIsEditingExisting] = useState(false)
   const [step, setStep] = useState<1 | 2 | 3>(1)
 
   // Step 1 state
@@ -67,6 +69,42 @@ export default function RegisterTeamPage() {
   // Step 3 state
   const [submittedReg, setSubmittedReg] = useState<TeamRegistration | null>(null)
 
+  const startEditingTeam = (regToEdit?: TeamRegistration | null) => {
+    const target = regToEdit || existingReg
+    if (!target) return
+    setTeamName(target.team_name || '')
+    setUtrNumber(target.utr_reference || '')
+    setScreenshotPreview(target.payment_screenshot_url || '')
+    setAgreedToRules(true)
+
+    const newAdditional: MemberForm[] = [
+      emptyMember(),
+      emptyMember(),
+      emptyMember(),
+      emptyMember(),
+      emptyMember()
+    ]
+
+    const otherMembers = (target.members || []).slice(1)
+    otherMembers.forEach((m, idx) => {
+      if (idx < 5) {
+        newAdditional[idx] = {
+          name: m.name || '',
+          srn: m.srn || '',
+          phone: m.phone || '',
+          email: m.email || '',
+          department: m.department || '',
+          semester: m.semester || '',
+          section: m.section || '',
+          residence_type: m.residence_type || 'Non-Hostelite'
+        }
+      }
+    })
+    setAdditionalMembers(newAdditional)
+    setIsEditingExisting(true)
+    setStep(1)
+  }
+
   useEffect(() => {
     if (authLoading) return
     async function loadData() {
@@ -76,6 +114,12 @@ export default function RegisterTeamPage() {
         if (active && user) {
           const reg = await LocalDB.getRegistrationByLeader(user.id, active.id)
           setExistingReg(reg)
+          if (reg && reg.allow_edit && typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search)
+            if (params.get('edit') === 'true') {
+              startEditingTeam(reg)
+            }
+          }
         }
       } finally {
         setDataLoading(false)
@@ -126,6 +170,10 @@ export default function RegisterTeamPage() {
         showToast(`Please select Department, Semester, and Section for Member ${i + 2}.`, 'warning')
         return
       }
+      if (isOtherDepartment(m.department) && !getCustomDepartmentText(m.department).trim()) {
+        showToast(`Please manually write the department for Member ${i + 2}.`, 'warning')
+        return
+      }
     }
     // Validate optional members (Member 5 and Member 6)
     for (let i = 3; i < additionalMembers.length; i++) {
@@ -139,6 +187,10 @@ export default function RegisterTeamPage() {
         }
         if (!m.department || !m.semester || !m.section) {
           showToast(`Please select Department, Semester, and Section for Member ${i + 2} (Optional).`, 'warning')
+          return
+        }
+        if (isOtherDepartment(m.department) && !getCustomDepartmentText(m.department).trim()) {
+          showToast(`Please manually write the department for Member ${i + 2} (Optional).`, 'warning')
           return
         }
       }
@@ -197,6 +249,22 @@ export default function RegisterTeamPage() {
       }
       const filledAdditional = additionalMembers.filter(m => m.name.trim() && m.srn.trim())
       const members: TeamMember[] = [leaderMember, ...filledAdditional]
+
+      if (isEditingExisting && existingReg) {
+        const updated = await LocalDB.updateTeamRegistrationDetails(existingReg.id, {
+          team_name: teamName.trim().toUpperCase(),
+          members,
+          payment_screenshot_url: finalScreenshotUrl,
+          utr_reference: utrNumber.trim() || undefined
+        })
+        setSubmittedReg(updated || existingReg)
+        setExistingReg(updated || existingReg)
+        setIsEditingExisting(false)
+        setStep(3)
+        showToast('Team registration updated successfully!', 'success')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
 
       const newReg = await LocalDB.addRegistration({
         hackathon_id: hackathon.id,
@@ -266,7 +334,7 @@ export default function RegisterTeamPage() {
   }
 
   // Already registered
-  if (existingReg && step !== 3) {
+  if (existingReg && !isEditingExisting && step !== 3) {
     const statusConfig = {
       pending: { bg: 'bg-amber-950/40', border: 'border-amber-700/60', text: 'text-amber-300', icon: <Clock className="w-5 h-5 text-amber-400 animate-pulse" />, label: 'Approval Pending (Under Review)' },
       approved: { bg: 'bg-emerald-950/40', border: 'border-emerald-700/60', text: 'text-emerald-300', icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />, label: 'Approved & Confirmed' },
@@ -286,6 +354,24 @@ export default function RegisterTeamPage() {
           <p className="text-slate-400 text-xs">
             Submitted on {new Date(existingReg.created_at).toLocaleDateString()}
           </p>
+
+          {existingReg.allow_edit && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/80 via-blue-950/80 to-slate-900 border border-cyan-400 text-left space-y-2.5 shadow-[0_0_25px_rgba(0,210,255,0.25)]">
+              <div className="flex items-center gap-2 text-cyan-300 text-xs font-black uppercase font-mono">
+                <Unlock className="w-4 h-4 text-cyan-400 animate-pulse" /> Registration Open for Editing
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed">
+                The hackathon administrators have unlocked your registration! You can update your team name, member roster, departments, and contact info.
+              </p>
+              <button
+                type="button"
+                onClick={() => startEditingTeam()}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0072FF] via-[#00D2FF] to-[#38BDF8] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(0,210,255,0.3)] hover:brightness-110 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Edit3 className="w-4 h-4" /> Edit Team Registration Details →
+              </button>
+            </div>
+          )}
 
           {existingReg.status === 'pending' && (
             <div className="p-4 rounded-2xl bg-[#081510] border border-[#25D366]/50 text-left space-y-2">
@@ -413,6 +499,34 @@ export default function RegisterTeamPage() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             className="bg-[#0C1222] rounded-3xl p-4 sm:p-8 border border-slate-800 shadow-xl space-y-6"
           >
+            {isEditingExisting && (
+              <div className="p-4 rounded-2xl bg-cyan-950/60 border border-cyan-500/80 flex items-center justify-between gap-3 shadow-[0_0_20px_rgba(0,210,255,0.2)]">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0">
+                    <Edit3 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-cyan-300 block">
+                      Editing Squad Registration Mode
+                    </span>
+                    <span className="text-[11px] text-slate-300">
+                      Update your team name, roster, departments, and click Continue to save changes.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingExisting(false)
+                    setStep(1)
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 text-xs text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
             <div>
               <h2 className="text-lg font-black text-white flex items-center gap-2">
                 <Users className="w-5 h-5 text-[#00D2FF]" /> Squad Configuration
@@ -558,8 +672,15 @@ export default function RegisterTeamPage() {
                           <div className="sm:col-span-2">
                             <select
                               required={!isOptional}
-                              value={member.department || ''}
-                              onChange={e => updateMember(idx, 'department', e.target.value)}
+                              value={getSelectDepartmentValue(member.department)}
+                              onChange={e => {
+                                const val = e.target.value
+                                if (val === 'Other') {
+                                  updateMember(idx, 'department', member.department && isOtherDepartment(member.department) ? member.department : 'Other')
+                                } else {
+                                  updateMember(idx, 'department', val)
+                                }
+                              }}
                               className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
                             >
                               <option value="" disabled className="bg-[#0C1222] text-slate-500">
@@ -571,6 +692,22 @@ export default function RegisterTeamPage() {
                                 </option>
                               ))}
                             </select>
+
+                            {isOtherDepartment(member.department) && (
+                              <div className="mt-2 animate-fadeIn">
+                                <label className="block text-[10px] uppercase tracking-wider text-cyan-300 font-bold mb-1">
+                                  Write Department Manually <span className="text-[#FF7A00]">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  required={!isOptional}
+                                  value={getCustomDepartmentText(member.department)}
+                                  onChange={e => updateMember(idx, 'department', e.target.value ? `Other: ${e.target.value}` : 'Other')}
+                                  placeholder="e.g. B.Tech Aerospace Engineering, Diploma in Finance, etc."
+                                  className="w-full bg-[#080E1C] border border-[#00D2FF]/60 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none font-semibold shadow-[0_0_10px_rgba(0,210,255,0.15)]"
+                                />
+                              </div>
+                            )}
                           </div>
                           <div>
                             <select
@@ -926,7 +1063,7 @@ export default function RegisterTeamPage() {
                 <input
                   type="file"
                   accept="image/*"
-                  required
+                  required={!screenshotPreview}
                   onChange={handleFileChange}
                   className="absolute inset-0 opacity-0 cursor-pointer z-10"
                 />
@@ -983,9 +1120,9 @@ export default function RegisterTeamPage() {
                   className="w-full sm:flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#0072FF] via-[#00D2FF] to-[#38BDF8] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(0,210,255,0.35)] disabled:opacity-50 cursor-pointer"
                 >
                   {submitting ? (
-                    <><div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" /> Uploading Screenshot & Submitting...</>
+                    <><div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" /> {isEditingExisting ? 'Saving Updates...' : 'Uploading Screenshot & Submitting...'}</>
                   ) : (
-                    <>Send Payment Screenshot & Submit →</>
+                    <>{isEditingExisting ? 'Save & Update Registration →' : 'Send Payment Screenshot & Submit →'}</>
                   )}
                 </button>
               </div>

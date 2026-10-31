@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShieldAlert, Users, CheckCircle2, XCircle, Clock, Download, Search,
-  Eye, EyeOff, X, UserPlus, Lock, RefreshCw, AlertCircle, MessageSquare,
+  Eye, EyeOff, X, UserPlus, Lock, Unlock, RefreshCw, AlertCircle, MessageSquare,
   Sparkles, Plus, Trash2, Edit3, Calendar, Check, Filter,
   FileSpreadsheet, ExternalLink, Copy, Upload, Image as ImageIcon,
   ShieldCheck, DollarSign, Terminal, ChevronDown, ChevronUp, Link as LinkIcon,
@@ -15,7 +15,8 @@ import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
 import { LocalDB, getTeamTraderPin, exportRegistrationsToExcel, exportLeaderboardToExcel, exportFilteredMembersToExcel, exportProfilesToExcel, PRESET_ARTH_MANTRA } from '@/lib/storage'
 import { STOCK_MARKET_URL } from '@/lib/config'
-import { TeamRegistration, AdminUser, Hackathon, UserRole, UserProfile, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ProblemStatement, TeamDatasheet, AuctionSheet } from '@/types'
+import { TeamRegistration, TeamMember, AdminUser, Hackathon, UserRole, UserProfile, RegistrationStatus, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ProblemStatement, TeamDatasheet, AuctionSheet } from '@/types'
+import { isOtherDepartment, getCustomDepartmentText, getSelectDepartmentValue, OTHER_OPTION } from '@/lib/departments'
 import Link from 'next/link'
 
 const ARTH_MANTRA_PS_PRESETS: ProblemStatement[] = [
@@ -427,6 +428,15 @@ export default function AdminDashboardPage() {
   const [isUploadingAuction, setIsUploadingAuction] = useState(false)
   const [isSubmittingAuction, setIsSubmittingAuction] = useState(false)
 
+  // Admin Edit Team State
+  const [adminEditingTeam, setAdminEditingTeam] = useState<TeamRegistration | null>(null)
+  const [adminEditTeamName, setAdminEditTeamName] = useState('')
+  const [adminEditTeamUtr, setAdminEditTeamUtr] = useState('')
+  const [adminEditTeamStatus, setAdminEditTeamStatus] = useState<RegistrationStatus>('pending')
+  const [adminEditTeamAllowEdit, setAdminEditTeamAllowEdit] = useState(false)
+  const [adminEditMembers, setAdminEditMembers] = useState<TeamMember[]>([])
+  const [isAdminSavingTeam, setIsAdminSavingTeam] = useState(false)
+
   // Datasheet Modal State
   const [datasheetModalTeam, setDatasheetModalTeam] = useState<TeamRegistration | null>(null)
   const [datasheetFileUrl, setDatasheetFileUrl] = useState('')
@@ -787,6 +797,126 @@ export default function AdminDashboardPage() {
       }
     } finally {
       setIsSubmittingReject(false)
+    }
+  }
+
+  // Toggle Allow Edit (Open / Lock registration for team)
+  const handleToggleAllowEdit = async (reg: TeamRegistration) => {
+    const nextStatus = !reg.allow_edit
+    setRegistrations(prev =>
+      prev.map(r => r.id === reg.id ? { ...r, allow_edit: nextStatus } : r)
+    )
+    const ok = await LocalDB.setTeamAllowEdit(reg.id, nextStatus)
+    if (ok) {
+      showToast(
+        nextStatus
+          ? `Registration opened for "${reg.team_name}"! Team members can now edit their details.`
+          : `Registration locked for "${reg.team_name}".`,
+        nextStatus ? 'success' : 'info'
+      )
+      await loadData(true)
+    }
+  }
+
+  // Admin Edit Team Handlers
+  const handleOpenAdminEditModal = (reg: TeamRegistration) => {
+    setAdminEditingTeam(reg)
+    setAdminEditTeamName(reg.team_name || '')
+    setAdminEditTeamUtr(reg.utr_reference || '')
+    setAdminEditTeamStatus(reg.status || 'pending')
+    setAdminEditTeamAllowEdit(Boolean(reg.allow_edit))
+    setAdminEditMembers(JSON.parse(JSON.stringify(reg.members || [])))
+  }
+
+  const handleUpdateAdminMember = (index: number, field: keyof TeamMember, value: string) => {
+    setAdminEditMembers(prev => {
+      const next = [...prev]
+      next[index] = { ...next[index], [field]: value }
+      return next
+    })
+  }
+
+  const handleAddAdminMember = () => {
+    if (adminEditMembers.length >= 6) {
+      showToast('Maximum 6 members allowed per team.', 'warning')
+      return
+    }
+    setAdminEditMembers(prev => [
+      ...prev,
+      {
+        name: '',
+        srn: '',
+        phone: '',
+        email: '',
+        department: '',
+        semester: '',
+        section: '',
+        residence_type: 'Non-Hostelite'
+      }
+    ])
+  }
+
+  const handleRemoveAdminMember = (idx: number) => {
+    if (adminEditMembers.length <= 4) {
+      showToast('Minimum 4 members required per team.', 'warning')
+      return
+    }
+    setAdminEditMembers(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const handleSaveAdminTeamEdit = async () => {
+    if (!adminEditingTeam) return
+    if (!adminEditTeamName.trim()) {
+      showToast('Team name cannot be empty.', 'warning')
+      return
+    }
+    if (adminEditMembers.length < 4) {
+      showToast('A team must have at least 4 members.', 'warning')
+      return
+    }
+
+    // Validate members
+    for (let i = 0; i < adminEditMembers.length; i++) {
+      const m = adminEditMembers[i]
+      if (!m.name.trim() || !m.srn.trim() || !m.phone.trim() || !m.email.trim()) {
+        showToast(`Please fill in Name, SRN, Phone, and Email for Member ${i + 1}.`, 'warning')
+        return
+      }
+      if (m.phone.replace(/\D/g, '').length !== 10) {
+        showToast(`Phone number for Member ${i + 1} must be 10 digits.`, 'warning')
+        return
+      }
+      if (!m.department || !m.semester || !m.section) {
+        showToast(`Please select Department, Semester, and Section for Member ${i + 1}.`, 'warning')
+        return
+      }
+      if (isOtherDepartment(m.department) && !getCustomDepartmentText(m.department).trim()) {
+        showToast(`Please manually write the department for Member ${i + 1}.`, 'warning')
+        return
+      }
+    }
+
+    setIsAdminSavingTeam(true)
+    try {
+      const updated = await LocalDB.updateTeamRegistrationDetails(adminEditingTeam.id, {
+        team_name: adminEditTeamName.trim().toUpperCase(),
+        utr_reference: adminEditTeamUtr.trim() || undefined,
+        status: adminEditTeamStatus,
+        allow_edit: adminEditTeamAllowEdit,
+        members: adminEditMembers
+      })
+      if (updated) {
+        setRegistrations(prev => prev.map(r => r.id === updated.id ? updated : r))
+        showToast(`Team "${updated.team_name}" details updated successfully!`, 'success')
+        setAdminEditingTeam(null)
+        await loadData(true)
+      } else {
+        showToast('Failed to update team details.', 'error')
+      }
+    } catch (err: any) {
+      showToast('Error saving changes: ' + (err?.message || 'Unknown error'), 'error')
+    } finally {
+      setIsAdminSavingTeam(false)
     }
   }
 
@@ -2255,6 +2385,11 @@ export default function AdminDashboardPage() {
                                 <span>PS: {reg.assigned_problem_statement.track}</span>
                               </span>
                             )}
+                            {reg.allow_edit && (
+                              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-400 flex items-center gap-1 shadow-[0_0_10px_rgba(0,210,255,0.25)]">
+                                <Unlock className="w-3 h-3 text-cyan-400" /> Editing Open
+                              </span>
+                            )}
                           </div>
                           <div className="text-xs text-slate-400 flex flex-wrap items-center gap-y-1 gap-x-3">
                             <span>Leader: <strong className="text-slate-200 font-semibold">{getAdminLeaderName(reg)}</strong> <span className="text-[11px] text-slate-500 font-mono">({reg.leader_email})</span></span>
@@ -2342,6 +2477,43 @@ export default function AdminDashboardPage() {
                             <Users className="w-3.5 h-3.5" />
                             <span>Members ({reg.members?.length})</span>
                             {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                          </button>
+
+                          {/* Edit Team Details (Admin) */}
+                          <button
+                            onClick={() => handleOpenAdminEditModal(reg)}
+                            className="py-1.5 px-3 rounded-xl border border-indigo-500/70 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                            title="Edit squad members, departments, contact info, and team name"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                            <span>Edit Team</span>
+                          </button>
+
+                          {/* Toggle Open/Lock Registration */}
+                          <button
+                            onClick={() => handleToggleAllowEdit(reg)}
+                            className={`py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                              reg.allow_edit
+                                ? 'border-amber-500/80 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                                : 'border-cyan-500/70 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300'
+                            }`}
+                            title={
+                              reg.allow_edit
+                                ? 'Registration is unlocked for participants. Click to lock it.'
+                                : 'Click to open/unlock registration so the team leader & members can edit.'
+                            }
+                          >
+                            {reg.allow_edit ? (
+                              <>
+                                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                                <span>Lock Reg</span>
+                              </>
+                            ) : (
+                              <>
+                                <Unlock className="w-3.5 h-3.5 text-cyan-400" />
+                                <span>Open Reg</span>
+                              </>
+                            )}
                           </button>
 
                           {/* Approval button */}
@@ -5078,6 +5250,259 @@ export default function AdminDashboardPage() {
                       <span>{isRestoringPortal ? 'Restoring System...' : 'Confirm & Restore'}</span>
                     </button>
                   </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {/* ── MODAL: ADMIN EDIT TEAM DETAILS ────────────────────────── */}
+          {adminEditingTeam && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-[#0C1222] max-w-3xl w-full rounded-3xl p-5 sm:p-7 border border-indigo-500/60 shadow-[0_0_50px_rgba(99,102,241,0.25)] relative my-8 max-h-[90vh] overflow-y-auto space-y-5"
+              >
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center">
+                      <Edit3 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-white uppercase tracking-wider">
+                        Admin Edit: {adminEditingTeam.team_name}
+                      </h3>
+                      <p className="text-[11px] text-slate-400">
+                        Edit squad members, departments, contact info, approval status, or registration lock.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAdminEditingTeam(null)}
+                    className="p-1.5 rounded-xl border border-slate-800 hover:border-slate-600 text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Team Controls: Name, UTR, Status, Allow Edit */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-[#080E1C] p-4 rounded-2xl border border-slate-800">
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-bold mb-1">
+                      Team Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={adminEditTeamName}
+                      onChange={e => setAdminEditTeamName(e.target.value)}
+                      className="w-full bg-[#0C1222] border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs text-white font-bold uppercase outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-bold mb-1">
+                      UTR Reference
+                    </label>
+                    <input
+                      type="text"
+                      value={adminEditTeamUtr}
+                      onChange={e => setAdminEditTeamUtr(e.target.value)}
+                      placeholder="e.g. 267389128392"
+                      className="w-full bg-[#0C1222] border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs text-cyan-300 font-mono outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-bold mb-1">
+                      Registration Status
+                    </label>
+                    <select
+                      value={adminEditTeamStatus}
+                      onChange={e => setAdminEditTeamStatus(e.target.value as RegistrationStatus)}
+                      className="w-full bg-[#0C1222] border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs text-white font-bold outline-none cursor-pointer"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-bold mb-1">
+                      Allow Team To Edit
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setAdminEditTeamAllowEdit(prev => !prev)}
+                      className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        adminEditTeamAllowEdit
+                          ? 'bg-amber-500/20 border-amber-500/70 text-amber-300'
+                          : 'bg-slate-800 border-slate-700 text-slate-400'
+                      }`}
+                    >
+                      {adminEditTeamAllowEdit ? (
+                        <><Unlock className="w-3.5 h-3.5 text-amber-400" /> Open for edits</>
+                      ) : (
+                        <><Lock className="w-3.5 h-3.5" /> Locked</>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Squad Members */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase text-indigo-300 tracking-wider">
+                      Squad Members ({adminEditMembers.length}/6)
+                    </h4>
+                    {adminEditMembers.length < 6 && (
+                      <button
+                        type="button"
+                        onClick={handleAddAdminMember}
+                        className="py-1 px-3 rounded-lg border border-indigo-800 bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Member
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {adminEditMembers.map((m, idx) => {
+                      const isLeader = idx === 0
+                      const isOptional = idx >= 4
+                      return (
+                        <div key={idx} className="p-3.5 rounded-2xl bg-[#080E1C] border border-slate-800 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-indigo-400">
+                              Member {idx + 1} {isLeader ? '(Team Leader)' : ''} {isOptional ? '(Optional)' : ''}
+                            </span>
+                            {idx >= 4 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveAdminMember(idx)}
+                                className="text-rose-400 hover:text-rose-300 text-xs flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Remove
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={m.name}
+                              onChange={e => handleUpdateAdminMember(idx, 'name', e.target.value)}
+                              placeholder="Full Name *"
+                              className="w-full bg-[#0C1222] border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none"
+                            />
+                            <input
+                              type="text"
+                              value={m.srn}
+                              onChange={e => handleUpdateAdminMember(idx, 'srn', e.target.value)}
+                              placeholder="SRN / Roll No *"
+                              className="w-full bg-[#0C1222] border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1.5 text-xs text-white uppercase font-mono outline-none"
+                            />
+                            <input
+                              type="tel"
+                              maxLength={10}
+                              value={m.phone}
+                              onChange={e => handleUpdateAdminMember(idx, 'phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                              placeholder="10-digit Phone *"
+                              className="w-full bg-[#0C1222] border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1.5 text-xs text-white font-mono outline-none"
+                            />
+                            <input
+                              type="email"
+                              value={m.email}
+                              onChange={e => handleUpdateAdminMember(idx, 'email', e.target.value)}
+                              placeholder="Email Address *"
+                              className="w-full bg-[#0C1222] border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none"
+                            />
+                          </div>
+
+                          {/* Department with Other manual field */}
+                          <div className="space-y-2">
+                            <select
+                              value={getSelectDepartmentValue(m.department)}
+                              onChange={e => {
+                                const val = e.target.value
+                                if (val === 'Other') {
+                                  handleUpdateAdminMember(idx, 'department', m.department && isOtherDepartment(m.department) ? m.department : 'Other')
+                                } else {
+                                  handleUpdateAdminMember(idx, 'department', val)
+                                }
+                              }}
+                              className="w-full bg-[#0C1222] border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none cursor-pointer"
+                            >
+                              <option value="" disabled className="bg-[#0C1222] text-slate-500">-- Select Department --</option>
+                              {PES_DEPARTMENTS.map(dept => (
+                                <option key={dept} value={dept} className="bg-[#0C1222] text-white">{dept}</option>
+                              ))}
+                            </select>
+
+                            {isOtherDepartment(m.department) && (
+                              <div className="animate-fadeIn">
+                                <label className="block text-[10px] uppercase tracking-wider text-cyan-300 font-bold mb-1">
+                                  Write Department Manually <span className="text-[#FF7A00]">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={getCustomDepartmentText(m.department)}
+                                  onChange={e => handleUpdateAdminMember(idx, 'department', e.target.value ? `Other: ${e.target.value}` : 'Other')}
+                                  placeholder="e.g. B.Tech Aerospace Engineering, Diploma in Finance, etc."
+                                  className="w-full bg-[#0C1222] border border-[#00D2FF]/60 focus:border-[#00D2FF] rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none font-semibold"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <select
+                              value={m.semester || ''}
+                              onChange={e => handleUpdateAdminMember(idx, 'semester', e.target.value)}
+                              className="w-full bg-[#0C1222] border border-slate-800 focus:border-indigo-500 rounded-xl px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
+                            >
+                              <option value="" disabled className="bg-[#0C1222] text-slate-500">Semester</option>
+                              {SEMESTER_OPTIONS.map(s => <option key={s} value={s} className="bg-[#0C1222] text-white">Sem {s}</option>)}
+                            </select>
+                            <select
+                              value={m.section || ''}
+                              onChange={e => handleUpdateAdminMember(idx, 'section', e.target.value)}
+                              className="w-full bg-[#0C1222] border border-slate-800 focus:border-indigo-500 rounded-xl px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
+                            >
+                              <option value="" disabled className="bg-[#0C1222] text-slate-500">Section</option>
+                              {SECTION_OPTIONS.map(sec => <option key={sec} value={sec} className="bg-[#0C1222] text-white">Sec {sec}</option>)}
+                            </select>
+                            <select
+                              value={m.residence_type || 'Non-Hostelite'}
+                              onChange={e => handleUpdateAdminMember(idx, 'residence_type', e.target.value)}
+                              className="w-full bg-[#0C1222] border border-slate-800 focus:border-indigo-500 rounded-xl px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
+                            >
+                              {RESIDENCE_OPTIONS.map(r => <option key={r} value={r} className="bg-[#0C1222] text-white">{r}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Footer buttons */}
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setAdminEditingTeam(null)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isAdminSavingTeam}
+                    onClick={handleSaveAdminTeamEdit}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-900/30 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isAdminSavingTeam && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                    <span>{isAdminSavingTeam ? 'Saving Team Updates...' : 'Save Team Changes'}</span>
+                  </button>
                 </div>
               </motion.div>
             </div>

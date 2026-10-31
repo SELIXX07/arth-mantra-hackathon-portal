@@ -8,6 +8,7 @@ import { Compass, UserPlus, Lock, Mail, Phone, User, GraduationCap, AlertCircle,
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
 import { PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ResidenceType } from '@/types'
+import { isOtherDepartment, formatDepartmentValue } from '@/lib/departments'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -19,6 +20,7 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState('')
   const [srn, setSrn] = useState('')
   const [department, setDepartment] = useState('')
+  const [otherDepartmentText, setOtherDepartmentText] = useState('')
   const [semester, setSemester] = useState('')
   const [section, setSection] = useState('')
   const [residenceType, setResidenceType] = useState<ResidenceType>('Non-Hostelite')
@@ -52,6 +54,15 @@ export default function RegisterPage() {
       return
     }
 
+    if (isOtherDepartment(department) && !otherDepartmentText.trim()) {
+      setError('Please manually write what department you are from.')
+      return
+    }
+
+    const finalDepartment = isOtherDepartment(department)
+      ? formatDepartmentValue(department, otherDepartmentText)
+      : department
+
     if (!semester) {
       setError('Please select your semester.')
       return
@@ -80,7 +91,7 @@ export default function RegisterPage() {
         password,
         phone: phone.trim(),
         srn: srn.trim().toUpperCase(),
-        department,
+        department: finalDepartment,
         semester,
         section,
         residence_type: residenceType
@@ -243,6 +254,25 @@ export default function RegisterPage() {
                 <BookOpen className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
                 <div className="absolute right-3 top-3 pointer-events-none text-slate-500 text-xs">▼</div>
               </div>
+
+              {isOtherDepartment(department) && (
+                <div className="mt-2.5 animate-fadeIn">
+                  <label className="block text-[11px] uppercase tracking-wider text-cyan-300 font-bold mb-1">
+                    Write Your Department Manually <span className="text-[#FF7A00]">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={otherDepartmentText}
+                      onChange={e => setOtherDepartmentText(e.target.value)}
+                      placeholder="e.g. B.Tech Aerospace Engineering, Diploma in Finance, etc."
+                      className="w-full bg-[#080E1C] border border-[#00D2FF]/60 focus:border-[#00D2FF] rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none pl-9 font-semibold shadow-[0_0_10px_rgba(0,210,255,0.15)]"
+                    />
+                    <BookOpen className="w-4 h-4 text-[#00D2FF] absolute left-3 top-3 pointer-events-none" />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Semester */}

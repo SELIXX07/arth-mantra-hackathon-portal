@@ -29,7 +29,8 @@ export const PES_DEPARTMENTS = [
   'B.Pharm (Bachelor of Pharmacy)',
   'Pharm.D (Doctor of Pharmacy)',
   'B.Sc (Psychology / Nursing)',
-  'Other / Department of Choice'
+  'Other / Department of Choice',
+  'Other'
 ] as const;
 
 export const SEMESTER_OPTIONS = ['1', '2', '3', '4', '5', '6', '7'] as const;
@@ -63,6 +64,7 @@ export interface TeamMember {
   semester?: string;
   section?: string;
   residence_type?: string;
+  allow_edit?: boolean;
   assigned_problem_statement?: ProblemStatement;
   assigned_datasheet?: TeamDatasheet;
   assigned_auction_sheet?: AuctionSheet;
@@ -121,6 +123,7 @@ export interface TeamRegistration {
   rejection_comment?: string;
   reviewed_by?: string;
   reviewed_at?: string;
+  allow_edit?: boolean;
   // Score tracking fields (ARTHMANTRA 6-Round Structure)
   score?: number;
   round_1_score?: number; // Round 1: The Industry Blueprint

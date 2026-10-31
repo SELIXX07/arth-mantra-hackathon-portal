@@ -57,12 +57,14 @@ const parseRow = (raw: any) => {
 
   const leader_name = resolveLeaderName(raw, members)
   const team_name = raw.team_name ? String(raw.team_name).trim().toUpperCase() : ''
+  const allow_edit = Boolean(raw.allow_edit ?? (members[0] && members[0].allow_edit))
 
   return {
     ...raw,
     team_name,
     members,
-    leader_name
+    leader_name,
+    allow_edit
   }
 }
 
@@ -228,7 +230,40 @@ export async function PATCH(req: NextRequest) {
     if (ic_balance !== undefined) payload.ic_balance = Number(ic_balance) || 0
     if (brownie_points !== undefined) payload.brownie_points = Number(brownie_points) || 0
     if (judge_notes !== undefined) payload.judge_notes = judge_notes
-    if (body.members !== undefined) payload.members = body.members
+    if (body.utr_reference !== undefined) payload.utr_reference = body.utr_reference
+    if (body.payment_screenshot_url !== undefined) payload.payment_screenshot_url = body.payment_screenshot_url
+
+    // Handle members and allow_edit sync
+    if (body.members !== undefined) {
+      const mems = Array.isArray(body.members) ? [...body.members] : []
+      if (mems[0]) {
+        if (body.allow_edit !== undefined) {
+          mems[0] = { ...mems[0], allow_edit: Boolean(body.allow_edit) }
+        }
+      }
+      payload.members = mems
+    } else if (body.allow_edit !== undefined) {
+      // allow_edit changed without passing full members
+      const { data: existingReg } = await supabase
+        .from('team_registrations')
+        .select('members')
+        .eq('id', id)
+        .single()
+
+      let existingMembers: any[] = []
+      try {
+        existingMembers = Array.isArray(existingReg?.members)
+          ? [...existingReg.members]
+          : (typeof existingReg?.members === 'string' ? JSON.parse(existingReg.members) : [])
+      } catch {
+        existingMembers = []
+      }
+
+      if (existingMembers.length > 0) {
+        existingMembers[0] = { ...existingMembers[0], allow_edit: Boolean(body.allow_edit) }
+        payload.members = existingMembers
+      }
+    }
 
     const { data, error } = await supabase
       .from('team_registrations')

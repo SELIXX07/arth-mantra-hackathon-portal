@@ -7,13 +7,14 @@ import { motion } from 'framer-motion'
 import {
   User, Mail, Phone, GraduationCap, Edit3, Save, X, CheckCircle2, Clock, AlertCircle,
   ExternalLink, Users, Trophy, Compass, ArrowRight, MessageSquare, BookOpen, Layers, Bookmark, Building2,
-  Activity, Copy, Check, ShieldCheck, Lock, Eye, EyeOff, Download, FileSpreadsheet, Gavel, Award
+  Activity, Copy, Check, ShieldCheck, Lock, Unlock, Eye, EyeOff, Download, FileSpreadsheet, Gavel, Award, Plus, Trash2
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
 import { LocalDB, getTeamTraderPin } from '@/lib/storage'
 import { STOCK_MARKET_URL } from '@/lib/config'
-import { Hackathon, TeamRegistration, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ResidenceType } from '@/types'
+import { Hackathon, TeamRegistration, TeamMember, PES_DEPARTMENTS, SEMESTER_OPTIONS, SECTION_OPTIONS, RESIDENCE_OPTIONS, ResidenceType } from '@/types'
+import { isOtherDepartment, getCustomDepartmentText, getSelectDepartmentValue, formatDepartmentValue, OTHER_OPTION } from '@/lib/departments'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -30,10 +31,18 @@ export default function ProfilePage() {
   const [editPhone, setEditPhone] = useState('')
   const [editSrn, setEditSrn] = useState('')
   const [editDepartment, setEditDepartment] = useState('')
+  const [editOtherDeptText, setEditOtherDeptText] = useState('')
   const [editSemester, setEditSemester] = useState('')
   const [editSection, setEditSection] = useState('')
   const [editResidenceType, setEditResidenceType] = useState<ResidenceType>('Non-Hostelite')
   const [saving, setSaving] = useState(false)
+
+  // Team Edit Modal state (when registration is unlocked)
+  const [isEditingTeam, setIsEditingTeam] = useState(false)
+  const [editTeamName, setEditTeamName] = useState('')
+  const [editTeamUtr, setEditTeamUtr] = useState('')
+  const [editTeamMembers, setEditTeamMembers] = useState<TeamMember[]>([])
+  const [isSavingTeam, setIsSavingTeam] = useState(false)
   const [stockMarketState, setStockMarketState] = useState<{ 
     status: string; 
     remaining_secs: number; 
@@ -140,7 +149,8 @@ export default function ProfilePage() {
     setEditName(user.full_name)
     setEditPhone(user.phone || '')
     setEditSrn(user.srn || '')
-    setEditDepartment(user.department || '')
+    setEditDepartment(getSelectDepartmentValue(user.department))
+    setEditOtherDeptText(getCustomDepartmentText(user.department))
     setEditSemester(user.semester || '')
     setEditSection(user.section || '')
     setEditResidenceType((user.residence_type as ResidenceType) || 'Non-Hostelite')
@@ -151,13 +161,21 @@ export default function ProfilePage() {
 
   const saveEdit = async () => {
     if (!user) return
+    if (isOtherDepartment(editDepartment) && !editOtherDeptText.trim()) {
+      showToast('Please manually specify your department / course.', 'warning')
+      return
+    }
+    const finalDepartment = isOtherDepartment(editDepartment)
+      ? formatDepartmentValue(editDepartment, editOtherDeptText)
+      : editDepartment
+
     setSaving(true)
     try {
       const ok = await LocalDB.updateProfile(user.id, {
         full_name: editName.trim(),
         phone: editPhone.trim(),
         srn: editSrn.trim().toUpperCase(),
-        department: editDepartment.trim() || undefined,
+        department: finalDepartment || undefined,
         semester: editSemester.trim() || undefined,
         section: editSection.trim() || undefined,
         residence_type: editResidenceType
@@ -167,7 +185,7 @@ export default function ProfilePage() {
           full_name: editName.trim(),
           phone: editPhone.trim() || undefined,
           srn: editSrn.trim().toUpperCase() || undefined,
-          department: editDepartment.trim() || undefined,
+          department: finalDepartment || undefined,
           semester: editSemester.trim() || undefined,
           section: editSection.trim() || undefined,
           residence_type: editResidenceType
@@ -181,6 +199,103 @@ export default function ProfilePage() {
       showToast('Error updating profile.', 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleStartTeamEdit = () => {
+    if (!registration) return
+    setEditTeamName(registration.team_name || '')
+    setEditTeamUtr(registration.utr_reference || '')
+    setEditTeamMembers(JSON.parse(JSON.stringify(registration.members || [])))
+    setIsEditingTeam(true)
+  }
+
+  const handleUpdateTeamMember = (index: number, field: keyof TeamMember, value: string) => {
+    setEditTeamMembers(prev => {
+      const next = [...prev]
+      next[index] = { ...next[index], [field]: value }
+      return next
+    })
+  }
+
+  const handleAddTeamMember = () => {
+    if (editTeamMembers.length >= 6) {
+      showToast('Maximum 6 members allowed per team.', 'warning')
+      return
+    }
+    setEditTeamMembers(prev => [
+      ...prev,
+      {
+        name: '',
+        srn: '',
+        phone: '',
+        email: '',
+        department: '',
+        semester: '',
+        section: '',
+        residence_type: 'Non-Hostelite'
+      }
+    ])
+  }
+
+  const handleRemoveTeamMember = (idx: number) => {
+    if (editTeamMembers.length <= 4) {
+      showToast('Minimum 4 members required per team.', 'warning')
+      return
+    }
+    setEditTeamMembers(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const handleSaveTeamEdit = async () => {
+    if (!registration) return
+    if (!editTeamName.trim()) {
+      showToast('Please enter a team name.', 'warning')
+      return
+    }
+    if (editTeamMembers.length < 4) {
+      showToast('A team must have at least 4 members.', 'warning')
+      return
+    }
+
+    // Validate members
+    for (let i = 0; i < editTeamMembers.length; i++) {
+      const m = editTeamMembers[i]
+      if (!m.name.trim() || !m.srn.trim() || !m.phone.trim() || !m.email.trim()) {
+        showToast(`Please fill in Name, SRN, Phone, and Email for Member ${i + 1}.`, 'warning')
+        return
+      }
+      if (m.phone.replace(/\D/g, '').length !== 10) {
+        showToast(`Phone number for Member ${i + 1} must be exactly 10 digits.`, 'warning')
+        return
+      }
+      if (!m.department || !m.semester || !m.section) {
+        showToast(`Please select Department, Semester, and Section for Member ${i + 1}.`, 'warning')
+        return
+      }
+      if (isOtherDepartment(m.department) && !getCustomDepartmentText(m.department).trim()) {
+        showToast(`Please manually write the department for Member ${i + 1}.`, 'warning')
+        return
+      }
+    }
+
+    setIsSavingTeam(true)
+    try {
+      const updated = await LocalDB.updateTeamRegistrationDetails(registration.id, {
+        team_name: editTeamName.trim().toUpperCase(),
+        utr_reference: editTeamUtr.trim() || undefined,
+        members: editTeamMembers
+      })
+      if (updated) {
+        setRegistration(updated)
+        showToast('Team registration updated successfully!', 'success')
+        setIsEditingTeam(false)
+      } else {
+        showToast('Failed to update team registration.', 'error')
+      }
+    } catch (err: any) {
+      showToast('Error saving team updates: ' + (err?.message || 'Unknown error'), 'error')
+    } finally {
+      setIsSavingTeam(false)
     }
   }
 
@@ -398,6 +513,21 @@ export default function ProfilePage() {
                       </select>
                       <BookOpen className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5 pointer-events-none" />
                     </div>
+
+                    {isOtherDepartment(editDepartment) && (
+                      <div className="mt-2 animate-fadeIn">
+                        <label className="block text-[10px] uppercase tracking-wider text-cyan-300 font-bold mb-1">
+                          Write Department Manually <span className="text-[#FF7A00]">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={editOtherDeptText}
+                          onChange={e => setEditOtherDeptText(e.target.value)}
+                          placeholder="e.g. B.Tech Aerospace Engineering, Diploma, etc."
+                          className="w-full bg-[#080E1C] border border-[#00D2FF]/60 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none font-semibold shadow-[0_0_10px_rgba(0,210,255,0.15)]"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -507,6 +637,38 @@ export default function ProfilePage() {
                           <div className="text-xs opacity-90">{cfg.message}</div>
                         </div>
                       </div>
+
+                      {/* Editing Unlocked Banner for Participants */}
+                      {registration.allow_edit && (
+                        <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/90 via-blue-950/80 to-slate-900 border border-cyan-400 space-y-3 shadow-[0_0_25px_rgba(0,210,255,0.25)]">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-cyan-300 text-xs font-black uppercase font-mono">
+                              <Unlock className="w-4 h-4 text-cyan-400 animate-pulse" /> Registration Open for Editing
+                            </div>
+                            <span className="text-[10px] bg-cyan-900/60 border border-cyan-500/80 text-cyan-200 px-2.5 py-0.5 rounded-full font-bold">
+                              Unlocked by Admin
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-200 leading-relaxed">
+                            Your team registration has been opened for editing. You can update your team name, roster, contact numbers, or change departments.
+                          </p>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <button
+                              type="button"
+                              onClick={handleStartTeamEdit}
+                              className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0072FF] via-[#00D2FF] to-[#38BDF8] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(0,210,255,0.3)] hover:brightness-110 flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                              <Edit3 className="w-4 h-4" /> Edit Team Details Now
+                            </button>
+                            <Link
+                              href="/register-team?edit=true"
+                              className="py-2.5 px-4 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-xs uppercase tracking-wider text-center transition-all flex items-center justify-center gap-1.5"
+                            >
+                              Open in Registration Page →
+                            </Link>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Rejection comment */}
                       {registration.status === 'rejected' && registration.rejection_comment && (
@@ -1034,6 +1196,225 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Participant Team Edit Modal */}
+      {isEditingTeam && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0C1222] border border-cyan-500/80 rounded-3xl p-5 sm:p-7 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-[0_0_50px_rgba(0,210,255,0.25)] space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                  <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white uppercase tracking-wider">
+                    Edit Team Registration
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Update team name, roster, departments, and member contact information.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingTeam(false)}
+                className="p-1.5 rounded-xl border border-slate-800 hover:border-slate-600 text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Team Name & UTR */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-bold mb-1">
+                  Team Name <span className="text-[#FF7A00]">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editTeamName}
+                  onChange={e => setEditTeamName(e.target.value)}
+                  className="w-full bg-[#080E1C] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-white font-bold uppercase outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-bold mb-1">
+                  UTR Reference
+                </label>
+                <input
+                  type="text"
+                  value={editTeamUtr}
+                  onChange={e => setEditTeamUtr(e.target.value)}
+                  placeholder="e.g. 267389128392"
+                  className="w-full bg-[#080E1C] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-2 text-xs text-cyan-300 font-mono outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Members Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase text-cyan-300 tracking-wider">
+                  Squad Members ({editTeamMembers.length}/6)
+                </h4>
+                {editTeamMembers.length < 6 && (
+                  <button
+                    type="button"
+                    onClick={handleAddTeamMember}
+                    className="py-1 px-3 rounded-lg border border-cyan-800 bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Member
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {editTeamMembers.map((m, idx) => {
+                  const isLeader = idx === 0
+                  const isOptional = idx >= 4
+                  return (
+                    <div key={idx} className="p-3.5 rounded-2xl bg-[#080E1C] border border-slate-800 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-cyan-400">
+                            Member {idx + 1} {isLeader ? '(Team Leader)' : ''} {isOptional ? '(Optional)' : ''}
+                          </span>
+                        </div>
+                        {idx >= 4 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTeamMember(idx)}
+                            className="text-rose-400 hover:text-rose-300 text-xs flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Remove
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={m.name}
+                          onChange={e => handleUpdateTeamMember(idx, 'name', e.target.value)}
+                          placeholder="Full Name *"
+                          className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-1.5 text-xs text-white outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={m.srn}
+                          onChange={e => handleUpdateTeamMember(idx, 'srn', e.target.value)}
+                          placeholder="SRN / Roll No *"
+                          className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-1.5 text-xs text-white uppercase font-mono outline-none"
+                        />
+                        <input
+                          type="tel"
+                          maxLength={10}
+                          value={m.phone}
+                          onChange={e => handleUpdateTeamMember(idx, 'phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          placeholder="10-digit Phone *"
+                          className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-1.5 text-xs text-white font-mono outline-none"
+                        />
+                        <input
+                          type="email"
+                          value={m.email}
+                          onChange={e => handleUpdateTeamMember(idx, 'email', e.target.value)}
+                          placeholder="Email Address *"
+                          className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-1.5 text-xs text-white outline-none"
+                        />
+                      </div>
+
+                      {/* Department with Other manual field */}
+                      <div className="space-y-2">
+                        <select
+                          value={getSelectDepartmentValue(m.department)}
+                          onChange={e => {
+                            const val = e.target.value
+                            if (val === 'Other') {
+                              handleUpdateTeamMember(idx, 'department', m.department && isOtherDepartment(m.department) ? m.department : 'Other')
+                            } else {
+                              handleUpdateTeamMember(idx, 'department', val)
+                            }
+                          }}
+                          className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-3 py-1.5 text-xs text-white outline-none cursor-pointer"
+                        >
+                          <option value="" disabled className="bg-[#0C1222] text-slate-500">-- Select Department --</option>
+                          {PES_DEPARTMENTS.map(dept => (
+                            <option key={dept} value={dept} className="bg-[#0C1222] text-white">{dept}</option>
+                          ))}
+                        </select>
+
+                        {isOtherDepartment(m.department) && (
+                          <div className="animate-fadeIn">
+                            <label className="block text-[10px] uppercase tracking-wider text-cyan-300 font-bold mb-1">
+                              Write Department Manually <span className="text-[#FF7A00]">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={getCustomDepartmentText(m.department)}
+                              onChange={e => handleUpdateTeamMember(idx, 'department', e.target.value ? `Other: ${e.target.value}` : 'Other')}
+                              placeholder="e.g. B.Tech Aerospace Engineering, Diploma in Finance, etc."
+                              className="w-full bg-[#0C1222] border border-[#00D2FF]/60 focus:border-[#00D2FF] rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none font-semibold"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <select
+                          value={m.semester || ''}
+                          onChange={e => handleUpdateTeamMember(idx, 'semester', e.target.value)}
+                          className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
+                        >
+                          <option value="" disabled className="bg-[#0C1222] text-slate-500">Semester</option>
+                          {SEMESTER_OPTIONS.map(s => <option key={s} value={s} className="bg-[#0C1222] text-white">Sem {s}</option>)}
+                        </select>
+                        <select
+                          value={m.section || ''}
+                          onChange={e => handleUpdateTeamMember(idx, 'section', e.target.value)}
+                          className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
+                        >
+                          <option value="" disabled className="bg-[#0C1222] text-slate-500">Section</option>
+                          {SECTION_OPTIONS.map(sec => <option key={sec} value={sec} className="bg-[#0C1222] text-white">Sec {sec}</option>)}
+                        </select>
+                        <select
+                          value={m.residence_type || 'Non-Hostelite'}
+                          onChange={e => handleUpdateTeamMember(idx, 'residence_type', e.target.value)}
+                          className="w-full bg-[#0C1222] border border-slate-800 focus:border-[#00D2FF] rounded-xl px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
+                        >
+                          {RESIDENCE_OPTIONS.map(r => <option key={r} value={r} className="bg-[#0C1222] text-white">{r}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsEditingTeam(false)}
+                className="px-4 py-2 rounded-xl border border-slate-700 hover:border-slate-500 text-xs text-slate-300 hover:text-white transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSavingTeam}
+                onClick={handleSaveTeamEdit}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0072FF] via-[#00D2FF] to-[#38BDF8] text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(0,210,255,0.3)] hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {isSavingTeam ? (
+                  <><div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" /> Saving...</>
+                ) : (
+                  <><Check className="w-4 h-4" /> Save Squad Changes</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

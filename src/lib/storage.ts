@@ -733,6 +733,165 @@ export const LocalDB = {
     return index !== -1 ? all[index] : null
   },
 
+  async setTeamAllowEdit(id: string, allow_edit: boolean): Promise<boolean> {
+    const all = this.getRegistrations()
+    const index = all.findIndex(r => r.id === id)
+    const now = new Date().toISOString()
+    if (index !== -1) {
+      const updatedMembers = [...(all[index].members || [])]
+      if (updatedMembers[0]) {
+        updatedMembers[0] = { ...updatedMembers[0], allow_edit }
+      }
+      all[index] = {
+        ...all[index],
+        allow_edit,
+        members: updatedMembers,
+        updated_at: now
+      }
+      this.saveRegistrations(all)
+    }
+
+    // 1. Try server-side API first
+    if (isBrowser()) {
+      try {
+        const res = await fetch('/api/registrations', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, allow_edit })
+        })
+        if (res.ok) return true
+      } catch (apiErr) {
+        console.warn('[LocalDB] setTeamAllowEdit API failed, using fallback:', apiErr)
+      }
+    }
+
+    // 2. Direct Supabase fallback
+    const supabase = getSupabase()
+    if (supabase) {
+      try {
+        const { data: current } = await supabase.from('team_registrations').select('members').eq('id', id).single()
+        let mems = current?.members
+        if (typeof mems === 'string') {
+          try { mems = JSON.parse(mems) } catch { mems = [] }
+        }
+        if (Array.isArray(mems) && mems.length > 0) {
+          mems[0] = { ...mems[0], allow_edit }
+          await supabase.from('team_registrations').update({ members: mems, updated_at: now }).eq('id', id)
+        }
+        return true
+      } catch (err) {
+        console.error('Supabase setTeamAllowEdit exception:', err)
+      }
+    }
+
+    return true
+  },
+
+  async updateTeamRegistrationDetails(
+    id: string,
+    updates: {
+      team_name?: string
+      members?: TeamMember[]
+      utr_reference?: string
+      payment_screenshot_url?: string
+      allow_edit?: boolean
+      status?: RegistrationStatus
+      rejection_comment?: string
+    }
+  ): Promise<TeamRegistration | null> {
+    const all = this.getRegistrations()
+    const index = all.findIndex(r => r.id === id)
+    const now = new Date().toISOString()
+
+    let finalMembers: TeamMember[] = updates.members ? [...updates.members] : (index !== -1 ? [...all[index].members] : [])
+    if (updates.allow_edit !== undefined && finalMembers[0]) {
+      finalMembers[0] = { ...finalMembers[0], allow_edit: updates.allow_edit }
+    } else if (index !== -1 && all[index].allow_edit !== undefined && finalMembers[0] && finalMembers[0].allow_edit === undefined) {
+      finalMembers[0] = { ...finalMembers[0], allow_edit: all[index].allow_edit }
+    }
+
+    const updatedObj: any = {
+      ...updates,
+      members: finalMembers,
+      updated_at: now
+    }
+    if (updates.allow_edit !== undefined) {
+      updatedObj.allow_edit = updates.allow_edit
+    }
+
+    if (index !== -1) {
+      all[index] = {
+        ...all[index],
+        ...updatedObj
+      }
+      this.saveRegistrations(all)
+    }
+
+    // 1. Try server API route first
+    if (isBrowser()) {
+      try {
+        const res = await fetch('/api/registrations', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id,
+            ...updates,
+            members: finalMembers
+          })
+        })
+        if (res.ok) {
+          const json = await res.json()
+          if (json.success && json.registration) {
+            const parsed = parseRegistration(json.registration)
+            if (index !== -1) {
+              all[index] = parsed
+              this.saveRegistrations(all)
+            }
+            return parsed
+          }
+        }
+      } catch (apiErr) {
+        console.warn('[LocalDB] updateTeamRegistrationDetails API failed, using Supabase fallback:', apiErr)
+      }
+    }
+
+    // 2. Direct Supabase fallback
+    const supabase = getSupabase()
+    if (supabase) {
+      try {
+        const dbPayload: any = {
+          updated_at: now,
+          members: finalMembers
+        }
+        if (updates.team_name) dbPayload.team_name = updates.team_name.trim().toUpperCase()
+        if (updates.utr_reference !== undefined) dbPayload.utr_reference = updates.utr_reference
+        if (updates.payment_screenshot_url !== undefined) dbPayload.payment_screenshot_url = updates.payment_screenshot_url
+        if (updates.status) dbPayload.status = updates.status
+        if (updates.rejection_comment !== undefined) dbPayload.rejection_comment = updates.rejection_comment
+
+        const { data, error } = await supabase
+          .from('team_registrations')
+          .update(dbPayload)
+          .eq('id', id)
+          .select()
+
+        if (!error && data && data[0]) {
+          const parsed = parseRegistration(data[0])
+          if (index !== -1) {
+            all[index] = parsed
+            this.saveRegistrations(all)
+          }
+          return parsed
+        }
+        if (error) console.error('Supabase updateTeamRegistrationDetails error:', error.message)
+      } catch (err) {
+        console.error('Supabase updateTeamRegistrationDetails exception:', err)
+      }
+    }
+
+    return index !== -1 ? all[index] : null
+  },
+
   async updateTeamScore(
     id: string,
     scores: {
@@ -2010,6 +2169,7 @@ function parseRegistration(raw: any): TeamRegistration {
   const assigned_problem_statement = raw.assigned_problem_statement || (members[0] && members[0].assigned_problem_statement) || undefined
   const assigned_datasheet = raw.assigned_datasheet || (members[0] && members[0].assigned_datasheet) || undefined
   const assigned_auction_sheet = raw.assigned_auction_sheet || (members[0] && members[0].assigned_auction_sheet) || undefined
+  const allow_edit = Boolean(raw.allow_edit ?? (members[0] && members[0].allow_edit))
 
   // Compute clean leader_name
   let leader_name = 'Team Leader'
@@ -2052,6 +2212,7 @@ function parseRegistration(raw: any): TeamRegistration {
     assigned_problem_statement,
     assigned_datasheet,
     assigned_auction_sheet,
+    allow_edit,
     members
   }
 }
