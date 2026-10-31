@@ -4,6 +4,7 @@ export type UserRole = 'participant' | 'admin' | 'market_admin' | 'superadmin';
 export const PES_DEPARTMENTS = [
   'BCOM GENERAL',
   'BCOM ACCA',
+  'BCOM WITH CA',
   'CFA',
   'CMA',
   'B.Com (Hons.)',
