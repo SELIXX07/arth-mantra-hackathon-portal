@@ -335,7 +335,7 @@ export default function HomePage() {
                             ? 'bg-rose-950 text-rose-300 border border-rose-700'
                             : 'bg-[#FF7A00] text-slate-950 shadow-sm animate-pulse'
                         }`}>
-                          {isDeadlinePassed ? 'CLOSED' : 'SLOTS FILLING FAST'}
+                          {isDeadlinePassed ? 'CLOSED' : 'REGISTRATION CLOSES SOON'}
                         </span>
                         {!isDeadlinePassed && timeLeft && (
                           <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-600">
@@ -467,8 +467,9 @@ export default function HomePage() {
                           <span>Registrations Active & Open</span>
                         </div>
                       </div>
-                      <div className="mt-3 text-[10px] text-slate-500 font-medium">
-                        Limited squad slots available • Register your team early
+                      <div className="mt-3 text-[10px] text-amber-400/90 font-semibold flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span>Registration Closes Soon • Register early</span>
                       </div>
 
                       {isAdmin && (
@@ -509,8 +510,9 @@ export default function HomePage() {
                           />
                         </div>
                       </div>
-                      <div className="mt-3 text-[10px] text-slate-400">
-                        {Math.max(0, (hackathon.max_teams || 50) - approvedCount)} slots remaining
+                      <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-amber-400">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                        <span>Registration Closes Soon</span>
                       </div>
 
                       {/* Controls in Spec Card */}
