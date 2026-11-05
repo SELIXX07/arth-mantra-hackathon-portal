@@ -7,7 +7,7 @@ import {
   Calendar, Users, ArrowRight, Compass, Edit3, CheckCircle2,
   Clock, XCircle, Trophy, TrendingUp, BarChart3, LineChart,
   ShieldCheck, MapPin, Sparkles, DollarSign, Award, ChevronRight,
-  Eye, EyeOff, Lock
+  Eye, EyeOff, Lock, AlertCircle
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/components/ToastProvider'
@@ -443,6 +443,10 @@ export default function HomePage() {
                       ₹{hackathon.entry_fee} <span className="text-xs text-slate-400 font-normal">/ team</span>
                     </div>
                     <div className="text-[11px] text-slate-400 mt-1">4 to 6 members per team</div>
+                    <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center gap-1.5 text-[10px] font-bold text-rose-400">
+                      <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                      <span>Strictly No Refunds • Non-Refundable</span>
+                    </div>
                   </div>
 
                   {hackathon.show_registered_teams === false ? (

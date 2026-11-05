@@ -466,6 +466,9 @@ export default function RegisterTeamPage() {
               <div className="text-[11px] text-slate-400 flex items-center gap-3 mt-1 flex-wrap font-medium">
                 <span>📅 {hackathon.date}</span>
                 <span className="text-[#FF7A00] font-black">₹{hackathon.entry_fee} per team</span>
+                <span className="px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/80 text-[10px] font-bold">
+                  No Refunds
+                </span>
                 <span>👥 4 to 6 members</span>
               </div>
             </div>
@@ -935,6 +938,16 @@ export default function RegisterTeamPage() {
                           </ul>
                         </div>
 
+                        <div>
+                          <h4 className="font-black text-rose-400 uppercase tracking-wider text-xs mb-1 flex items-center gap-1.5">
+                            <AlertCircle className="w-3.5 h-3.5 text-rose-400" /> 7. Payment & No-Refund Policy
+                          </h4>
+                          <ul className="list-disc list-inside space-y-1 text-slate-300 text-[11px] pl-1">
+                            <li><strong>Strictly Non-Refundable:</strong> The registration fee of ₹{hackathon.entry_fee} per team is strictly non-refundable and non-transferable under any circumstances once registration or payment proof is submitted.</li>
+                            <li><strong>Forfeiture:</strong> Teams disqualified for misconduct, absence, academic dishonesty, or protocol violations forfeit their entry fee without exception.</li>
+                          </ul>
+                        </div>
+
                         <div className="pt-2 border-t border-slate-800">
                           <h4 className="font-black text-[#00D2FF] uppercase tracking-wider text-xs mb-1.5">
                             Contact & Support Desk
@@ -1031,7 +1044,11 @@ export default function RegisterTeamPage() {
               <div className="text-3xl font-black text-white">
                 ₹{hackathon.entry_fee} <span className="text-xs text-slate-400 font-normal">/ team</span>
               </div>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+              <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-rose-950/70 border border-rose-800/80 text-rose-300 text-xs font-bold">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>Strict No-Refund Policy: Registration fee is strictly non-refundable</span>
+              </div>
+              <p className="text-xs text-slate-300 mt-2.5 leading-relaxed">
                 Please complete payment of <strong>₹{hackathon.entry_fee}</strong> for your entire team and upload the screenshot proof below.
               </p>
             </div>
