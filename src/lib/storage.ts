@@ -924,7 +924,7 @@ export const LocalDB = {
     const r5 = scores.round_5_score !== undefined ? Number(scores.round_5_score) : Number(existing?.round_5_score || 0)
     const r6 = scores.round_6_score !== undefined ? Number(scores.round_6_score) : Number(existing?.round_6_score || 0)
 
-    const icStarting = scores.ic_starting !== undefined ? Number(scores.ic_starting) : Number(existing?.ic_starting || 10000)
+    const icStarting = scores.ic_starting !== undefined ? Number(scores.ic_starting) : Number(existing?.ic_starting || 25000)
     const icStock = scores.ic_stock_trades !== undefined ? Number(scores.ic_stock_trades) : Number(existing?.ic_stock_trades || 0)
     const icAuction = scores.ic_auction_spent !== undefined ? Number(scores.ic_auction_spent) : Number(existing?.ic_auction_spent || 0)
     const icPreR5Liquid = Math.max(0, icStarting - icStock - icAuction)

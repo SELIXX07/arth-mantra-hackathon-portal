@@ -936,7 +936,7 @@ export default function AdminDashboardPage() {
     setScoreR5(r5)
     setScoreR6(r6)
 
-    const starting = team.ic_starting !== undefined ? team.ic_starting : 10000
+    const starting = team.ic_starting !== undefined ? team.ic_starting : 25000
     setIcStarting(starting)
     setIcStockTrades(team.ic_stock_trades || 0)
     setIcAuctionSpent(team.ic_auction_spent || 0)
